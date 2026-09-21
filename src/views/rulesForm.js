@@ -1,4 +1,4 @@
-// Reglas de mantenimiento periódico de un vehículo (solo administradores).
+// Reglas de mantenimiento periódico de un vehículo.
 // "Cada X km/horas o cada Y meses, lo que ocurra antes": basta con rellenar uno de los dos.
 
 import { MAINTENANCE_KINDS, RULE_KINDS } from '@shared/constants.js';

@@ -1,7 +1,6 @@
 // Estructura común de pantalla: barra superior, contenido y barra de pestañas inferior.
 
 import logoUrl from '../assets/logo-prakisama.png';
-import { session } from '../lib/session.js';
 import { navigate } from '../router.js';
 import { fmtDateTime } from '../lib/format.js';
 import { banner, button, icon, iconButton, spinner } from './components.js';
@@ -10,7 +9,7 @@ import { clear, h } from './dom.js';
 const TABS = [
   { id: 'panel', path: '/', label: 'Panel', icon: 'home' },
   { id: 'vehiculos', path: '/vehiculos', label: 'Vehículos', icon: 'truck' },
-  { id: 'ajustes', path: '/ajustes', label: 'Ajustes', icon: 'sliders', admin: true },
+  { id: 'ajustes', path: '/ajustes', label: 'Ajustes', icon: 'sliders' },
   { id: 'cuenta', path: '/cuenta', label: 'Cuenta', icon: 'user' },
 ];
 
@@ -32,7 +31,6 @@ export function createShell(root) {
   function renderTabs(active) {
     clear(tabbar);
     for (const tab of TABS) {
-      if (tab.admin && session.profile?.role !== 'admin') continue;
       tabbar.append(h('a', { href: `#${tab.path}`, 'aria-current': tab.id === active ? 'page' : null }, icon(tab.icon), tab.label));
     }
   }

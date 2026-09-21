@@ -6,7 +6,7 @@ export const isNetworkError = (err) =>
 const AUTH_MESSAGES = [
   [/invalid login credentials/i, 'Email o contraseña incorrectos.'],
   [/email not confirmed/i, 'Tu email todavía no está confirmado.'],
-  [/signups? not allowed|user not found/i, 'Ese email no tiene acceso. Pide a un administrador que te invite.'],
+  [/signups? not allowed|user not found/i, 'Ese email no tiene acceso. Pide que te den de alta como usuario.'],
   [/rate limit|too many requests|after \d+ seconds/i, 'Demasiados intentos seguidos. Espera un minuto y vuelve a probar.'],
   [/password should be at least/i, 'La contraseña debe tener al menos 8 caracteres.'],
   [/same password|different from the old/i, 'La nueva contraseña debe ser distinta de la anterior.'],

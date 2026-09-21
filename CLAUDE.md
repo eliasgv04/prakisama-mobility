@@ -54,11 +54,11 @@ Nombre de la app: **Prakisama Mobility** (nombre corto en el móvil: "Mobility")
 - **Vanilla JS, no Preact**: ~10 pantallas de listas y formularios; unos helpers DOM bastan y no añaden dependencias ni paso de build.
 - **Router por hash**: funciona en cualquier hosting estático sin configurar reescrituras y no choca con el flujo de invitación/enlace mágico de Supabase.
 - **Service worker a mano** (sin Workbox): precachea la app shell; los datos no se cachean en el SW. El modo offline de solo lectura guarda la última consulta en `localStorage` (se borra al cerrar sesión).
-- **Login**: email + contraseña, con enlace mágico opcional. Alta solo por invitación (registro público desactivado); el primer usuario que existe es admin.
+- **Login**: email + contraseña, con enlace mágico opcional. Alta solo por invitación (registro público desactivado). Cada persona puede cambiar su contraseña en Cuenta.
 - **Email**: Resend, un email-resumen por destinatario al día, con `Idempotency-Key`. **Hosting**: Cloudflare Pages.
 - **Cálculo de ITV**: prioridad manual > última inspección (caducidad de la tarjeta) > cálculo por matriculación y `itv_rules`. Sin inspecciones registradas se asume que las anteriores se pasaron a tiempo y se marca la fecha como "estimada" (por eso una fecha calculada nunca sale "vencida").
 - **Reglas de ITV por tramos** (migración 6): `itv_rules.first_itv_years` + `steps` (`[{from_years, every_months}]`). **Verificadas contra el BOE** (art. 6.1 del RD 920/2017, no un anexo) el 21/09/2026; la tabla no ha cambiado desde 2017. **El brief se quedaba corto** y por eso el modelo pasó a tramos: las furgonetas N1 pasan a ITV **semestral** desde los 10 años (el brief decía "anual después"), los camiones N2/N3 son anuales **desde el primer año** (sin exención) y semestrales desde los 10, y la maquinaria de obra solo pasa ITV si su velocidad por construcción es ≥ 25 km/h (`itv_enabled` por vehículo permite excluir la lenta). Categorías con frecuencia propia (taxis, autoescuelas, agrícolas, caravanas…) van en el tipo "Otro", sin configurar. Detalle y fuentes en el README, sección 9. Reforma europea de la ITV en trámite (propuesta abril 2025): si llega, se cambia en Ajustes sin tocar código.
-- **Encargado**: ve todo, registra mantenimientos/averías con adjuntos y actualiza km. No crea ni edita vehículos, ni reglas, ni inspecciones de ITV, ni ajustes (fácil de ampliar en `supabase/migrations/…_rls_politicas.sql`).
+- **Sin roles (decisión de la empresa, migración 7)**: todos los usuarios son iguales y pueden hacerlo todo (menos borrar vehículos: solo baja lógica). **Los avisos por email los reciben TODOS los usuarios activos** (`send-reminders` lee `profiles`; ya no existe `notification_settings.recipients`). `profiles` solo expone `id, email, full_name, active, created_at, updated_at`: el `calendar_token` se lee con `my_calendar_token()`, por eso las consultas a `profiles` piden columnas por nombre (nunca `select *`). No se puede desactivar la propia cuenta ni dejar el sistema sin usuarios activos.
 - **Ajustes en tarjetas plegables** (`src/ui/accordion.js`, `<details>`): cerradas muestran un resumen del estado; solo una abierta a la vez; al guardar no se recarga la pantalla, se actualiza el resumen. Usar este patrón para pantallas de configuración largas.
 - **`lookupMatricula(matricula)`** (`src/lib/lookupMatricula.js`) es `async` y devuelve `null`; punto de extensión para un servicio externo futuro. No hay ninguna API inventada.
 - **Sin tests unitarios**: el brief pedía Vitest, pero el usuario decidió no hacerlos (no añadirlos salvo que los pida). La lógica sigue siendo pura y aislada en `_shared/`, así que añadirlos más adelante es trivial.
@@ -77,7 +77,7 @@ Nombre de la app: **Prakisama Mobility** (nombre corto en el móvil: "Mobility")
 - [x] Edge Functions `send-reminders` y `calendar-feed` desplegadas (`--use-api --no-verify-jwt`). Secretos puestos: `CRON_SECRET`, `APP_URL`, `RESEND_API_KEY` y `RESEND_FROM` (= `Prakisama Mobility <onboarding@resend.dev>`). **Limitación**: la cuenta de Resend no tiene ningún dominio verificado, así que solo se puede enviar a `eliasgonzalezvaldepenas@gmail.com` (el email de la cuenta de Resend, compartida con otro proyecto, FutsalKit). Envío real probado de punta a punta (función → Resend → `delivered`, sin duplicados en la 2.ª ejecución). Para enviar a más gente: verificar un dominio en Resend (añadir sus registros DNS), cambiar `RESEND_FROM` en `supabase/.env` y volver a subir los secretos con `supabase secrets set --env-file supabase/.env`.
 - [x] Cron `flota-enviar-avisos` programado a las 06:00 UTC (URL y secreto en Vault). Verificada la cadena cron → pg_net → función.
 - [x] Verificado contra el proyecto real con usuarios de prueba (ya borrados): 38 comprobaciones de RLS como anónimo/encargado, 14 como admin (triggers de ITV, restricciones, tramos de aviso d30/d15/d7/d0/overdue), y 21 + 11 flujos de interfaz como admin y encargado (subida de fotos y adjuntos a Storage incluida).
-- [ ] Pendiente: verificar un dominio en Resend (para enviar a más de una persona), poner los destinatarios en Ajustes, desplegar el frontend (Cloudflare Pages) y crear más usuarios.
+- [ ] Pendiente: verificar un dominio en Resend (para enviar a más de una persona), crear el usuario con el email de la empresa, y publicar el frontend.
 
 Notas de operación: aplicar migraciones con `SUPABASE_ACCESS_TOKEN=… npx supabase db push --linked`; redesplegar una función con `npx supabase functions deploy <nombre> --use-api --no-verify-jwt`. `.env` y `supabase/.env` (gitignorados) contienen la anon key y el `CRON_SECRET`.
 
@@ -127,7 +127,7 @@ Prakisama es una empresa de construcción con una flota de vehículos y posiblem
 - Antelaciones configurables, por defecto 30, 15 y 7 días antes y el mismo día del vencimiento, y un recordatorio semanal mientras siga vencido.
 - Envío por email mediante una Edge Function programada con pg_cron (una vez al día, por la mañana). Un resumen diario por destinatario en lugar de un email por vehículo, para no saturar.
 - Tabla de avisos enviados para evitar duplicados.
-- Ajustes: destinatarios de los avisos, antelaciones y activar o desactivar tipos de aviso.
+- Ajustes: destinatarios de los avisos, antelaciones y activar o desactivar tipos de aviso. *(Cambio posterior: sin lista de destinatarios; reciben todos los usuarios activos.)*
 
 ### 5. Calendario
 - Feed de calendario en formato .ics por usuario, servido por una Edge Function y protegido con un token aleatorio revocable en la URL. Así se puede suscribir desde Google Calendar, Apple Calendar u Outlook y los vencimientos aparecen y se actualizan solos.
@@ -137,7 +137,7 @@ Prakisama es una empresa de construcción con una flota de vehículos y posiblem
 
 ### 6. Usuarios y seguridad
 - Supabase Auth con email y contraseña (o enlace mágico).
-- Dos roles: admin (todo, incluida la configuración) y encargado (ver vehículos, registrar mantenimientos y km).
+- Dos roles: admin (todo, incluida la configuración) y encargado (ver vehículos, registrar mantenimientos y km). *(Cambio posterior: sin roles, todos los usuarios son iguales.)*
 - Row Level Security activado en todas las tablas y en Storage, con políticas explícitas. Explícame las políticas que apliques.
 - Ningún secreto en el frontend: solo la anon key. Las claves de Resend y la service role van como secretos de las Edge Functions y en `.env` fuera de git (incluye `.env.example`).
 

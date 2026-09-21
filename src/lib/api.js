@@ -5,7 +5,7 @@ import { fetchSnapshot } from '@shared/snapshot.js';
 import { isNetworkError } from './errors.js';
 import { withTimeout } from './net.js';
 import { readSnapshot, saveSnapshot } from './offline.js';
-import { SUPABASE_URL, supabase } from './supabase.js';
+import { PROFILE_COLUMNS, SUPABASE_URL, supabase } from './supabase.js';
 
 const orThrow = ({ data, error }) => {
   if (error) throw error;
@@ -203,7 +203,7 @@ export async function deleteRule(id) {
 }
 
 // ---------------------------------------------------------------------------
-// Ajustes (solo admin): avisos, reglas de ITV y usuarios
+// Ajustes: avisos, reglas de ITV y usuarios
 // ---------------------------------------------------------------------------
 
 export async function saveSettings(patch, userId) {
@@ -217,11 +217,11 @@ export async function saveItvRule(vehicleType, patch) {
 }
 
 export async function listProfiles() {
-  return orThrow(await supabase.from('profiles').select('*').order('created_at'));
+  return orThrow(await supabase.from('profiles').select(PROFILE_COLUMNS).order('created_at'));
 }
 
 export async function updateProfile(id, patch) {
-  orThrow(await supabase.from('profiles').update(patch).eq('id', id).select().single());
+  orThrow(await supabase.from('profiles').update(patch).eq('id', id).select('id').single());
 }
 
 // ---------------------------------------------------------------------------

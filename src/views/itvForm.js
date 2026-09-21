@@ -1,4 +1,4 @@
-// Registrar una inspección de ITV (solo administradores).
+// Registrar una inspección de ITV.
 // Si es favorable y es la más reciente, la próxima fecha pasa a tomarse de la caducidad de la tarjeta
 // (un trigger de la base de datos borra la fecha manual que hubiera).
 

@@ -8,6 +8,9 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const SUPABASE_URL = url;
 export const configured = Boolean(url && anonKey);
 
+/** Columnas de profiles que puede leer la app. El token del calendario NO está: cada persona lo pide con la función my_calendar_token(). */
+export const PROFILE_COLUMNS = 'id, email, full_name, active, created_at, updated_at';
+
 export const supabase = configured
   ? createClient(url, anonKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },

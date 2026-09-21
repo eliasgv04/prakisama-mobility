@@ -68,8 +68,8 @@ En el panel: **Authentication**
 
 ### 2.4 Crear usuarios
 
-1. **Authentication → Users → Add user** (con "Auto confirm user") o **Invite user**. **El primer usuario que se cree es administrador**; los siguientes entran como *encargado*.
-2. Un admin puede cambiar roles y desactivar cuentas en la app: **Ajustes → Usuarios y permisos**.
+1. **Authentication → Users → Add user** (con "Auto confirm user"). Pásale a la persona su email y una contraseña: podrá cambiarla en **Cuenta → Cambiar contraseña**.
+2. **Todos los usuarios son iguales** (no hay roles): cualquiera puede hacerlo todo, y **todos los usuarios activos reciben los avisos por email**. Para dejar de dar acceso y avisos a alguien, desactiva su cuenta en **Ajustes → Usuarios**.
 3. Si invitas por email, al abrir el enlace la app pide fijar una contraseña.
 
 ## 3. Variables de entorno
@@ -133,7 +133,7 @@ Devuelve, por destinatario, qué avisos enviaría hoy. Con `&today=2026-10-01` s
 - **Un email-resumen por destinatario y día**, no uno por vehículo.
 - Antelaciones configurables (por defecto 30, 15 y 7 días antes y el mismo día) y **recordatorio semanal mientras siga vencido**.
 - Sin duplicados: cada aviso queda en `notifications_sent`. Si un día falla el envío o se da de alta un vehículo con poco margen, el aviso se manda igualmente una sola vez (no depende de acertar el día exacto).
-- Todo se configura en la app: **Ajustes → Avisos por email** (tarjetas *Quién recibe los avisos*, *Cuándo y de qué avisar* y *Kilómetros y horas*).
+- Todo se configura en la app: **Ajustes → Avisos por email** (tarjetas *Cuándo y de qué avisar* y *Kilómetros y horas*). **No hay lista de destinatarios**: reciben el email todos los usuarios activos.
 
 ## 6. Calendario
 

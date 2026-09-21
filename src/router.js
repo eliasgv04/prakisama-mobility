@@ -6,7 +6,7 @@ const routes = [];
 const paramKeys = (path) => [...path.matchAll(/:([a-z]+)/gi)].map((m) => m[1]);
 const toRegex = (path) => new RegExp(`^${path.replace(/:[a-z]+/gi, '([^/]+)')}/?$`);
 
-/** @param {{path:string, load:Function, admin?:boolean, bare?:boolean}[]} list */
+/** @param {{path:string, load:Function, bare?:boolean}[]} list */
 export function defineRoutes(list) {
   routes.length = 0;
   for (const route of list) routes.push({ ...route, regex: toRegex(route.path), keys: paramKeys(route.path) });

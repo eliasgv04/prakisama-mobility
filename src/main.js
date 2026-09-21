@@ -1,6 +1,6 @@
 import './styles.css';
 import { configured } from './lib/supabase.js';
-import { initSession, isAdmin, onSessionChange, session } from './lib/session.js';
+import { initSession, onSessionChange, session } from './lib/session.js';
 import { currentLocation, defineRoutes, matchRoute, navigate, refresh, startRouter } from './router.js';
 import { routes } from './routes.js';
 import { banner, button } from './ui/components.js';
@@ -52,10 +52,6 @@ async function boot() {
   async function show(shell, path, query, mine) {
     const found = matchRoute(path);
     if (!found) return navigate('/', { replace: true });
-    if (found.route.admin && !isAdmin()) {
-      shell.show({ title: 'Sin permiso', tab: null, node: banner('Esta pantalla es solo para administradores.', 'warn') });
-      return;
-    }
     shell.showLoading();
     try {
       const view = await found.route.load({ params: found.params, query });

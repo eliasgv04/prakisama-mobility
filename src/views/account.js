@@ -2,8 +2,9 @@
 
 import { calendarFeedUrl, rotateCalendarToken } from '../lib/api.js';
 import { friendlyError } from '../lib/errors.js';
-import { roleLabel, session, signOut } from '../lib/session.js';
+import { session, setPassword, signOut } from '../lib/session.js';
 import { navigate, refresh } from '../router.js';
+import { accordion } from '../ui/accordion.js';
 import { button, section } from '../ui/components.js';
 import { confirmDialog, h, toast } from '../ui/dom.js';
 
@@ -15,9 +16,39 @@ export default async function account() {
   node.append(
     section(
       'Mi cuenta',
-      h('div', { class: 'card' }, h('div', { class: 'strong' }, profile.full_name || profile.email), h('div', { class: 'muted' }, profile.full_name ? profile.email : null), h('div', { style: 'margin-top:6px' }, h('span', { class: 'chip tag' }, roleLabel(profile.role)))),
+      h('div', { class: 'card' }, h('div', { class: 'strong' }, profile.full_name || profile.email), h('div', { class: 'muted' }, profile.full_name ? profile.email : null)),
     ),
   );
+
+  // --- Cambiar contraseña ---
+  if (online) {
+    const first = h('input', { type: 'password', name: 'new', required: true, minlength: 8, autocomplete: 'new-password' });
+    const second = h('input', { type: 'password', name: 'again', required: true, minlength: 8, autocomplete: 'new-password' });
+    const save = button('Guardar contraseña', { type: 'submit', block: true, iconName: 'check' });
+    const form = h(
+      'form',
+      {
+        class: 'stack',
+        onsubmit: async (event) => {
+          event.preventDefault();
+          if (first.value !== second.value) return toast('Las contraseñas no coinciden.', 'error');
+          save.disabled = true;
+          try {
+            await setPassword(first.value);
+            toast('Contraseña cambiada', 'success');
+          } catch (err) {
+            toast(friendlyError(err), 'error');
+            save.disabled = false;
+          }
+        },
+      },
+      h('p', { class: 'muted' }, 'Elige una contraseña de al menos 8 caracteres.'),
+      h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Nueva contraseña'), first),
+      h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Repítela'), second),
+      save,
+    );
+    node.append(section('Seguridad', accordion({ group: 'cuenta', iconName: 'user', title: 'Cambiar contraseña', summary: 'Para entrar la próxima vez', content: form }).el));
+  }
 
   // --- Feed de calendario ---
   const url = calendarFeedUrl(profile.calendar_token);

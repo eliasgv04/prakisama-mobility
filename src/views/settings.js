@@ -1,4 +1,4 @@
-// Ajustes (solo administradores). Cinco tarjetas plegables agrupadas en Avisos / ITV / Equipo.
+// Ajustes. Cuatro tarjetas plegables agrupadas en Avisos / ITV / Equipo.
 // Cerradas enseñan un resumen de cómo está cada cosa; abiertas dejan cambiarla. Solo hay una abierta
 // a la vez y al guardar no se recarga la pantalla: se actualiza el resumen de la propia tarjeta.
 
@@ -8,12 +8,11 @@ import { listProfiles, saveItvRule, saveSettings, updateProfile } from '../lib/a
 import { friendlyError } from '../lib/errors.js';
 import { loadFleet } from '../lib/fleet.js';
 import { fmtDateTime, fmtNumber } from '../lib/format.js';
-import { roleLabel, session } from '../lib/session.js';
+import { session } from '../lib/session.js';
 import { accordion, makeExclusive } from '../ui/accordion.js';
-import { areaField, button, checkField, icon, iconButton, readForm, section, selectField, textField, toInt } from '../ui/components.js';
+import { areaField, button, checkField, iconButton, readForm, section, textField, toInt } from '../ui/components.js';
 import { h, toast } from '../ui/dom.js';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** [30, 15, 7] → "30, 15 y 7" */
 const listES = (items) => (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} y ${items.at(-1)}`);
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -30,7 +29,7 @@ export default async function settings() {
     'div',
     {},
     h('p', { class: 'muted' }, 'Toca una tarjeta para abrirla y cambiar sus ajustes.'),
-    section('Avisos por email', recipientsCard(cfg).el, whenCard(cfg).el, usageCard(cfg).el),
+    section('Avisos por email', whenCard(cfg).el, usageCard(cfg).el),
     section('ITV', itvCard(itvRules).el),
     section('Equipo', usersCard(profiles).el),
   );
@@ -51,72 +50,6 @@ async function run(btn, task, okText) {
 }
 
 const saveButton = (label = 'Guardar cambios') => button(label, { type: 'submit', block: true, iconName: 'check' });
-
-// ---------------------------------------------------------------------------
-// Avisos · quién los recibe
-// ---------------------------------------------------------------------------
-
-const recipientsSummary = (cfg) => {
-  const n = cfg.recipients.length;
-  return { summary: n === 0 ? 'Nadie: no se enviará ningún email' : n === 1 ? cfg.recipients[0] : `${n} personas`, warn: n === 0 };
-};
-
-function recipientsCard(cfg) {
-  let draft = [...cfg.recipients];
-  const chips = h('div', { class: 'chips' });
-  const input = h('input', { type: 'email', placeholder: 'nombre@empresa.com', inputmode: 'email', autocapitalize: 'none', 'aria-label': 'Añadir destinatario' });
-
-  function renderChips() {
-    chips.replaceChildren(
-      ...draft.map((email) =>
-        h('span', { class: 'chip neutral' }, email, h('button', { type: 'button', 'aria-label': `Quitar ${email}`, onclick: () => { draft = draft.filter((r) => r !== email); renderChips(); } }, icon('x', 16))),
-      ),
-    );
-    if (draft.length === 0) chips.append(h('span', { class: 'muted' }, 'Todavía no hay nadie.'));
-  }
-  function addEmail() {
-    const value = input.value.trim().toLowerCase();
-    if (!value) return true;
-    if (!EMAIL_RE.test(value)) {
-      toast('Ese email no parece válido.', 'error');
-      return false;
-    }
-    if (!draft.includes(value)) draft.push(value);
-    input.value = '';
-    renderChips();
-    return true;
-  }
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      addEmail();
-    }
-  });
-  renderChips();
-
-  const save = saveButton();
-  const form = h(
-    'form',
-    {
-      class: 'stack',
-      onsubmit: (event) => {
-        event.preventDefault();
-        if (!addEmail()) return; // por si escribió uno y no pulsó "Añadir"
-        run(save, async () => {
-          await saveSettings({ recipients: draft }, session.user.id);
-          cfg.recipients = [...draft];
-          card.set(recipientsSummary(cfg));
-        }, 'Destinatarios guardados');
-      },
-    },
-    h('p', { class: 'muted' }, 'Reciben un único email cada mañana, y solo cuando hay algo que avisar.'),
-    chips,
-    h('div', { class: 'btn-row' }, input, button('Añadir', { variant: 'ghost', onClick: addEmail })),
-    save,
-  );
-  const card = accordion({ group: 'top', iconName: 'mail', title: 'Quién recibe los avisos', ...recipientsSummary(cfg), content: form });
-  return card;
-}
 
 // ---------------------------------------------------------------------------
 // Avisos · cuándo y de qué
@@ -157,7 +90,7 @@ function whenCard(cfg) {
         }, 'Avisos guardados');
       },
     },
-    h('p', { class: 'muted' }, 'Elige con cuántos días de margen se avisa de un vencimiento y de qué cosas.'),
+    h('p', { class: 'muted' }, 'Elige con cuántos días de margen se avisa de un vencimiento y de qué cosas. Los avisos los reciben por email todos los usuarios activos.'),
     textField('Avisar con esta antelación (días)', 'lead_days', { value: cfg.lead_days.join(', '), hint: 'Separados por comas. Por defecto: 30, 15, 7. El número mayor también pone el vencimiento en "Próximo" en el panel.' }),
     checkField('Avisar también el mismo día del vencimiento', 'notify_on_due_day', cfg.notify_on_due_day),
     checkField('Recordar cada semana mientras siga vencido', 'weekly_overdue', cfg.weekly_overdue),
@@ -362,12 +295,12 @@ function itvRuleCard(rule, onSaved) {
 }
 
 // ---------------------------------------------------------------------------
-// Equipo · usuarios y permisos
+// Equipo · usuarios (todos iguales: mismos permisos y todos reciben los avisos)
 // ---------------------------------------------------------------------------
 
 function usersSummary(profiles) {
-  const admins = profiles.filter((p) => p.role === 'admin' && p.active).length;
-  return { summary: `${plural(profiles.length, 'usuario', 'usuarios')} · ${plural(admins, 'administrador', 'administradores')}`, warn: false };
+  const active = profiles.filter((p) => p.active).length;
+  return { summary: `${plural(active, 'usuario activo', 'usuarios activos')} · reciben los avisos`, warn: active === 0 };
 }
 
 function usersCard(profiles) {
@@ -375,12 +308,12 @@ function usersCard(profiles) {
   const card = accordion({
     group: 'top',
     iconName: 'users',
-    title: 'Usuarios y permisos',
+    title: 'Usuarios',
     ...usersSummary(profiles),
     content: [
-      h('p', { class: 'muted' }, 'Administrador: puede hacerlo todo. Encargado: consulta la flota, registra mantenimientos y actualiza los km.'),
+      h('p', { class: 'muted' }, 'Todos los usuarios tienen los mismos permisos y todos los usuarios activos reciben los avisos por email. Si alguien deja de trabajar con la app, desactiva su cuenta.'),
       ...subs.map((s) => s.el),
-      h('p', { class: 'muted', style: 'margin-top:12px' }, 'Para dar de alta a alguien nuevo, invítalo desde Supabase (Authentication → Users → Invite user). Al entrar por primera vez aparecerá aquí como encargado.'),
+      h('p', { class: 'muted', style: 'margin-top:12px' }, 'Para dar de alta a alguien nuevo, créalo en Supabase (Authentication → Users → Add user) y pásale su contraseña: podrá cambiarla en Cuenta.'),
     ],
   });
   return card;
@@ -389,32 +322,36 @@ function usersCard(profiles) {
 function userCard(profile, onSaved) {
   const isMe = profile.id === session.user?.id;
   const describe = (p) => ({
-    summary: [roleLabel(p.role), p.active ? null : 'desactivado', isMe ? 'eres tú' : null].filter(Boolean).join(' · '),
+    summary: [p.full_name ? p.email : null, p.active ? null : 'desactivado', isMe ? 'eres tú' : null].filter(Boolean).join(' · ') || 'Activo',
     warn: !p.active,
   });
 
-  let content;
-  if (isMe) {
-    content = h('p', { class: 'muted' }, `Es tu cuenta (${profile.email}). Por seguridad no puedes cambiar tu propio rol ni desactivarte.`);
-  } else {
-    const roleSelect = selectField('Rol', 'role', [['admin', 'Administrador'], ['encargado', 'Encargado']], { value: profile.role });
-    const active = checkField('Cuenta activa (puede entrar en la app)', 'active', profile.active);
-    // Sin <form>: dos campos sueltos, se guarda con el botón.
-    const save = button('Guardar', {
-      block: true,
-      iconName: 'check',
-      onClick: () => {
-        const patch = { role: roleSelect.querySelector('select').value, active: active.querySelector('input').checked };
-        run(save, async () => {
-          await updateProfile(profile.id, patch);
-          Object.assign(profile, patch);
-          card.set(describe(profile));
-          onSaved();
-        }, 'Usuario actualizado');
-      },
-    });
-    content = h('div', { class: 'stack' }, h('p', { class: 'muted small' }, `${profile.email} · alta ${fmtDateTime(profile.created_at)}`), roleSelect, active, save);
-  }
+  const nameField = textField('Nombre', 'full_name', { value: profile.full_name ?? '', placeholder: 'Para reconocerlo en la lista' });
+  const active = isMe ? null : checkField('Cuenta activa (puede entrar en la app y recibe los avisos)', 'active', profile.active);
+  // Sin <form>: se guarda con el botón.
+  const save = button('Guardar', {
+    block: true,
+    iconName: 'check',
+    onClick: () => {
+      const patch = { full_name: nameField.querySelector('input').value.trim() || null };
+      if (active) patch.active = active.querySelector('input').checked;
+      run(save, async () => {
+        await updateProfile(profile.id, patch);
+        Object.assign(profile, patch);
+        card.set(describe(profile));
+        onSaved();
+      }, 'Usuario actualizado');
+    },
+  });
+  const content = h(
+    'div',
+    { class: 'stack' },
+    h('p', { class: 'muted small' }, `${profile.email} · alta ${fmtDateTime(profile.created_at)}`),
+    nameField,
+    active,
+    isMe ? h('p', { class: 'muted small' }, 'Es tu cuenta: no puedes desactivarla.') : null,
+    save,
+  );
   const card = accordion({ group: 'users', sub: true, title: profile.full_name || profile.email, ...describe(profile), content });
   return card;
 }

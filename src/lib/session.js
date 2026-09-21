@@ -3,7 +3,7 @@
 import { friendlyError, isNetworkError } from './errors.js';
 import { withTimeout } from './net.js';
 import { clearOffline, readProfile, saveProfile } from './offline.js';
-import { supabase } from './supabase.js';
+import { PROFILE_COLUMNS, supabase } from './supabase.js';
 
 /** Estado observable de la sesión (objeto único y mutable). */
 export const session = {
@@ -24,17 +24,19 @@ export function onSessionChange(fn) {
 }
 const emit = () => listeners.forEach((fn) => fn(session));
 
-export const isAdmin = () => session.profile?.role === 'admin';
-export const roleLabel = (role) => (role === 'admin' ? 'Administrador' : 'Encargado');
 
 async function fetchProfile(userId) {
   const cached = readProfile();
   // Sin red conocida y con perfil guardado: se abre al instante en modo offline.
   if (!navigator.onLine && cached?.id === userId) throw new Error('Failed to fetch (sin conexión)');
-  const request = supabase.from('profiles').select('*').eq('id', userId).maybeSingle().then(({ data, error }) => {
+  const request = (async () => {
+    const { data, error } = await supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', userId).maybeSingle();
     if (error) throw error;
-    return data;
-  });
+    if (!data) return null;
+    // Cada persona solo puede leer su propio token de calendario, y lo hace con esta función.
+    const { data: token } = await supabase.rpc('my_calendar_token');
+    return { ...data, calendar_token: token ?? null };
+  })();
   return cached?.id === userId ? withTimeout(request, 6000) : request;
 }
 
@@ -54,7 +56,7 @@ async function applyUser(user) {
   if (!profile || !profile.active) {
     await supabase.auth.signOut();
     clearOffline();
-    Object.assign(session, { user: null, profile: null, offline: false, blocked: 'Tu cuenta no está activa. Habla con un administrador.' });
+    Object.assign(session, { user: null, profile: null, offline: false, blocked: 'Tu cuenta no está activa. Pide a otra persona del equipo que la reactive.' });
     return;
   }
   saveProfile(profile);

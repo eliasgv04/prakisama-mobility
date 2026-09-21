@@ -3,7 +3,6 @@
 import { STATUS_RANK } from '@shared/constants.js';
 import { signedUrls } from '../lib/api.js';
 import { loadFleet } from '../lib/fleet.js';
-import { isAdmin } from '../lib/session.js';
 import { fillThumb, thumb, vehicleCard } from '../ui/cards.js';
 import { empty, icon } from '../ui/components.js';
 import { clear, h } from '../ui/dom.js';
@@ -11,7 +10,6 @@ import { clear, h } from '../ui/dom.js';
 export default async function vehiclesList() {
   const { status, offline, cachedAt } = await loadFleet();
   const all = [...status.byVehicle.values()];
-  const admin = isAdmin();
 
   let text = '';
   let showInactive = false;
@@ -69,7 +67,7 @@ export default async function vehiclesList() {
     },
   });
 
-  const node = h('div', { class: `stack${admin && !offline ? ' has-fab' : ''}` }, search);
+  const node = h('div', { class: `stack${!offline ? ' has-fab' : ''}` }, search);
   if (all.some((e) => !e.vehicle.active)) {
     node.append(
       h(
@@ -81,7 +79,7 @@ export default async function vehiclesList() {
     );
   }
   node.append(listHost);
-  if (admin && !offline) {
+  if (!offline) {
     node.append(h('a', { class: 'fab', href: '#/vehiculos/nuevo', 'aria-label': 'Añadir vehículo' }, icon('plus')));
   }
   renderList();

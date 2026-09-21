@@ -9,7 +9,7 @@ import { friendlyError } from '../lib/errors.js';
 import { itvSourceTag, loadFleet } from '../lib/fleet.js';
 import { daysAgo, fmtDate, fmtMoney, fmtUsage, usageWord } from '../lib/format.js';
 import { displayPlate } from '../lib/matricula.js';
-import { isAdmin, session } from '../lib/session.js';
+import { session } from '../lib/session.js';
 import { navigate, refresh } from '../router.js';
 import { button, empty, icon, section, spinner, statusChip } from '../ui/components.js';
 import { clear, confirmDialog, h, openSheet, toast } from '../ui/dom.js';
@@ -22,22 +22,21 @@ export default async function vehicleDetail({ params }) {
 
   const { vehicle, itv, rules } = entry;
   const settings = fleet.status.settings;
-  const admin = isAdmin();
   const online = !fleet.offline;
 
   const node = h('div', {});
   node.append(heroCard(vehicle, entry, fleet));
-  node.append(itvCard({ vehicle, entry, itv, settings, admin, online }));
+  node.append(itvCard({ vehicle, entry, itv, settings, online }));
   node.append(usageCard({ vehicle, entry, settings, online }));
-  node.append(rulesCard({ vehicle, rules, entry, settings, admin: admin && online }));
+  node.append(rulesCard({ vehicle, rules, entry, settings, canEdit: online }));
 
   // El historial se carga aparte para que la ficha aparezca al instante.
   const historyHost = h('div', {});
   node.append(section('Historial', historyHost));
-  if (online) loadHistory(historyHost, vehicle, admin);
+  if (online) loadHistory(historyHost, vehicle);
   else historyHost.append(h('div', { class: 'card muted' }, 'El historial no está disponible sin conexión.'));
 
-  if (admin && online) {
+  if (online) {
     node.append(h('div', { class: 'spacer' }), button('Editar vehículo', { variant: 'ghost', block: true, iconName: 'edit', onClick: () => navigate(`/vehiculos/${vehicle.id}/editar`) }));
   }
 
@@ -81,7 +80,7 @@ function heroCard(vehicle, entry) {
   );
 }
 
-function itvCard({ vehicle, entry, itv, settings, admin, online }) {
+function itvCard({ vehicle, entry, itv, settings, online }) {
   const card = h('div', { class: 'card' });
   const item = entry.items.find((i) => i.type === 'itv');
 
@@ -111,7 +110,7 @@ function itvCard({ vehicle, entry, itv, settings, admin, online }) {
 
   const actions = h('div', { class: 'btn-row', style: 'margin-top:12px' });
   if (item) actions.append(button('Añadir al calendario', { small: true, variant: 'ghost', iconName: 'calendar', onClick: () => downloadItemIcs(item, settings) }));
-  if (admin && online) {
+  if (online) {
     actions.append(button('Registrar ITV', { small: true, iconName: 'clipboard', onClick: () => navigate(`/vehiculos/${vehicle.id}/itv/nueva`) }));
     if (itv.applies) actions.append(button('Fecha manual', { small: true, variant: 'ghost', iconName: 'edit', onClick: () => openManualDateSheet(vehicle) }));
   }
@@ -160,10 +159,10 @@ function usageCard({ vehicle, entry, settings, online }) {
   return section(vehicle.usage_unit === 'h' ? 'Horas de uso' : 'Kilómetros', card);
 }
 
-function rulesCard({ vehicle, rules, entry, settings, admin }) {
+function rulesCard({ vehicle, rules, entry, settings, canEdit }) {
   const card = h('div', { class: 'card' });
   if (rules.length === 0) {
-    card.append(h('p', { class: 'muted' }, admin ? 'Sin reglas. Añade, por ejemplo, el cambio de aceite cada 15.000 km o 12 meses.' : 'Este vehículo no tiene mantenimientos periódicos configurados.'));
+    card.append(h('p', { class: 'muted' }, canEdit ? 'Sin reglas. Añade, por ejemplo, el cambio de aceite cada 15.000 km o 12 meses.' : 'Este vehículo no tiene mantenimientos periódicos configurados.'));
   }
   for (const view of rules) {
     const item = entry.items.find((i) => i.ruleId === view.rule.id);
@@ -179,7 +178,7 @@ function rulesCard({ vehicle, rules, entry, settings, admin }) {
       ),
     );
   }
-  if (admin) card.append(h('div', { style: 'margin-top:12px' }, button('Configurar reglas', { variant: 'ghost', block: true, iconName: 'wrench', onClick: () => navigate(`/vehiculos/${vehicle.id}/reglas`) })));
+  if (canEdit) card.append(h('div', { style: 'margin-top:12px' }, button('Configurar reglas', { variant: 'ghost', block: true, iconName: 'wrench', onClick: () => navigate(`/vehiculos/${vehicle.id}/reglas`) })));
   return section('Mantenimiento periódico', card);
 }
 
@@ -187,7 +186,7 @@ function rulesCard({ vehicle, rules, entry, settings, admin }) {
 // Historial (mantenimientos e inspecciones de ITV)
 // ---------------------------------------------------------------------------
 
-async function loadHistory(host, vehicle, admin) {
+async function loadHistory(host, vehicle) {
   host.replaceChildren(spinner());
   let history;
   try {
@@ -218,7 +217,6 @@ async function loadHistory(host, vehicle, admin) {
           ),
         );
 
-  const canDelete = (row) => admin || row.created_by === session.user?.id;
   const remove = (label, action) =>
     button('Borrar', {
       small: true,
@@ -249,7 +247,7 @@ async function loadHistory(host, vehicle, admin) {
             h('div', { class: 'muted small' }, [r.usage != null ? fmtUsage(r.usage, vehicle.usage_unit) : null, r.workshop, r.cost != null ? fmtMoney(r.cost) : null].filter(Boolean).join(' · ')),
             r.description ? h('p', { style: 'white-space:pre-wrap;margin-top:4px' }, r.description) : null,
             attachmentList(attachmentsFor('maintenance_record_id', r.id)),
-            canDelete(r) ? h('div', { style: 'margin-top:8px' }, remove('este registro', () => deleteMaintenanceRecord(r.id))) : null,
+            h('div', { style: 'margin-top:8px' }, remove('este registro', () => deleteMaintenanceRecord(r.id))),
           ),
         );
       }
@@ -264,7 +262,7 @@ async function loadHistory(host, vehicle, admin) {
             h('div', { class: 'muted small' }, [i.valid_until ? `Caduca el ${fmtDate(i.valid_until)}` : null, i.station, i.cost != null ? fmtMoney(i.cost) : null].filter(Boolean).join(' · ')),
             i.notes ? h('p', { style: 'white-space:pre-wrap;margin-top:4px' }, i.notes) : null,
             attachmentList(attachmentsFor('itv_inspection_id', i.id)),
-            admin ? h('div', { style: 'margin-top:8px' }, remove('esta inspección', () => deleteInspection(i.id))) : null,
+            h('div', { style: 'margin-top:8px' }, remove('esta inspección', () => deleteInspection(i.id))),
           ),
         );
       }

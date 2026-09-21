@@ -1,53 +1,52 @@
 # Seguridad y políticas RLS
 
-Toda la seguridad de datos está en la base de datos (Row Level Security), no en el frontend. Aunque alguien lea la clave `anon` del navegador o modifique el JavaScript, solo puede hacer lo que las políticas permiten a su usuario.
+Toda la seguridad de datos está en la base de datos (Row Level Security), no en el frontend. Aunque alguien lea la clave `anon` del navegador o modifique el JavaScript, solo puede hacer lo que las políticas permiten a su usuario. Por eso el código de la app se puede publicar sin riesgo: la protección no está en ocultarlo.
 
 ## Principios
 
 1. **RLS activado en las 9 tablas** y en Storage. Sin política = denegado.
 2. Solo el rol `authenticated` (usuario con sesión) recibe políticas. `anon` no puede nada.
-3. Dos roles de negocio, guardados en `profiles.role`:
-   - **admin**: todo, incluida la configuración.
-   - **encargado**: ver la flota, registrar mantenimientos/averías con adjuntos y actualizar km.
-4. Ambos necesitan un perfil **activo**. Desactivar un perfil (`active = false`) corta el acceso al instante.
-5. Las funciones `is_member()` e `is_admin()` son `SECURITY DEFINER` (leen `profiles` sin recursión de RLS) con `search_path` vacío. En las políticas se usan como `(select public.is_admin())` para que Postgres las evalúe una vez por consulta y no por fila.
-6. Las Edge Functions usan la `service_role`, que se salta RLS. Esa clave solo existe en el servidor (secretos de Supabase), nunca en el frontend ni en git.
+3. **Todos los usuarios son iguales** (decisión de la empresa, migración 7): no hay administradores ni encargados. Cualquier usuario con la cuenta **activa** puede hacer lo mismo. Desactivar una cuenta (`active = false`) corta su acceso al instante.
+4. `is_member()` es `SECURITY DEFINER` (lee `profiles` sin recursión de RLS) con `search_path` vacío. En las políticas se usa como `(select public.is_member())` para que Postgres la evalúe una vez por consulta y no por fila.
+5. Las Edge Functions usan la `service_role`, que se salta RLS. Esa clave solo existe en el servidor (secretos de Supabase), nunca en el frontend ni en git.
 
 ## Tabla de permisos
 
-`✔` permitido · `—` denegado · `propio` = solo lo que creó ese usuario
+`miembros` = cualquier usuario activo · `—` = denegado
 
 | Tabla | Ver | Crear | Modificar | Borrar |
 |---|---|---|---|---|
-| `profiles` | propio · admin: todos | trigger `handle_new_user` | propio (solo nombre) · admin: todos | — |
-| `vehicles` | miembros | admin | admin | **nadie** (baja lógica: `active=false`) |
-| `itv_rules` | miembros | — (5 filas fijas) | admin | — |
-| `itv_inspections` | miembros | admin | admin | admin |
-| `maintenance_rules` | miembros | admin | admin | admin |
-| `maintenance_records` | miembros | miembros (`created_by` = yo) | admin · propio | admin · propio |
-| `attachments` | miembros | miembros a mantenimientos · admin a ITV | — | admin · propio |
-| `notification_settings` | miembros | — (fila única id=1) | admin | — |
-| `notifications_sent` | admin | solo Edge Function (service_role) | — | — |
+| `profiles` | miembros (sin el token) | trigger `handle_new_user` | miembros: solo nombre y `active` | — |
+| `vehicles` | miembros | miembros | miembros | **nadie** (baja lógica: `active=false`) |
+| `itv_rules` | miembros | — (5 filas fijas) | miembros | — |
+| `itv_inspections` | miembros | miembros | miembros | miembros |
+| `maintenance_rules` | miembros | miembros | miembros | miembros |
+| `maintenance_records` | miembros | miembros (`created_by` = yo) | miembros | miembros |
+| `attachments` | miembros | miembros (`created_by` = yo) | — | miembros |
+| `notification_settings` | miembros | — (fila única id=1) | miembros | — |
+| `notifications_sent` | miembros | solo Edge Function (service_role) | — | — |
 
-**Por qué `notification_settings` y `itv_rules` se leen por todos los miembros:** la app calcula el semáforo en el cliente y necesita las antelaciones y las reglas de ITV. Los destinatarios de email quedan visibles para el encargado; si no se quiere, basta con mover `recipients` a una tabla solo-admin.
+## Quién recibe los avisos
+
+**Todos los usuarios activos** reciben el email-resumen diario: la Edge Function lee sus emails de `profiles` (ya no hay una lista de destinatarios aparte). Para que alguien reciba los avisos, se le da de alta como usuario; para que deje de recibirlos, se desactiva su cuenta.
 
 ## Cosas que RLS no puede hacer y cómo se resuelven
 
-RLS decide por **fila**, no por **columna**. Para esos casos hay triggers y funciones:
+RLS decide por **fila**, no por **columna**. Para esos casos hay permisos por columna, triggers y funciones:
 
 | Necesidad | Solución |
 |---|---|
-| El encargado debe actualizar los km sin poder editar el vehículo | `set_vehicle_usage(vehicle, km)` (`SECURITY DEFINER`, exige `is_member()`) |
+| Que nadie vea el token del calendario de otra persona (es su credencial del feed .ics) | Permisos por columna: `authenticated` solo puede leer `id, email, full_name, active, created_at, updated_at` de `profiles`. Cada uno lee **su** token con `my_calendar_token()`. Consecuencia: al consultar `profiles` hay que pedir las columnas por nombre (no vale `select *`) |
+| Que nadie cambie el email, el id o el token de otra persona | Permisos por columna: solo se puede actualizar `full_name` y `active` |
+| Nadie puede quedarse fuera por error | Trigger `profiles_guard`: no se puede desactivar la propia cuenta ni dejar el sistema sin ningún usuario activo |
 | Un registro con km sube los km del vehículo | Trigger `sync_vehicle_usage_from_record` (solo hacia arriba: una factura antigua no "rebobina") |
-| Fecha del último cambio de km | Trigger `vehicles_stamp_usage` |
-| Un usuario no debe poder hacerse admin editando su propio perfil | Trigger `profiles_guard`: un no-admin solo cambia su nombre |
-| No dejar el sistema sin administrador | `profiles_guard` impide desactivar/degradar al último admin activo |
+| Fecha del último cambio de km | Trigger `vehicles_stamp_usage` y función `set_vehicle_usage()` |
 | Rotar el token del calendario | `rotate_calendar_token()` (solo el propio perfil) |
 | Registrar ITV favorable sustituye la fecha manual | Trigger `itv_clear_manual_date` (solo si es la inspección más reciente) |
 
-Las funciones con `SECURITY DEFINER` tienen `EXECUTE` revocado a `public` y `anon` (migraciones 2 y 5): las de uso desde la app (`set_vehicle_usage`, `rotate_calendar_token`, `is_admin`, `is_member`) solo para `authenticated`, y las de trigger para nadie (Postgres no comprueba `EXECUTE` al dispararlas).
+Las funciones `SECURITY DEFINER` tienen `EXECUTE` revocado a `public` y `anon`: las que usa la app (`set_vehicle_usage`, `rotate_calendar_token`, `my_calendar_token`, `is_member`) solo para `authenticated`, y las de trigger para nadie (Postgres no comprueba `EXECUTE` al dispararlas).
 
-> Verificado contra el proyecto real: un anónimo no puede leer ninguna tabla, ni llamar a ninguna función, ni acceder a los buckets; un encargado no puede crear/editar/borrar vehículos, registrar ITV, tocar reglas ni ajustes, ni hacerse admin editando su perfil.
+> Verificado contra el proyecto real con usuarios de prueba (ya borrados): un anónimo no puede leer ninguna tabla ni llamar a ninguna función; un usuario puede crear, editar y borrar todo lo que toca, pero no borrar vehículos; nadie puede leer el token de otro, cambiar el email de otro ni desactivarse a sí mismo; un usuario desactivado pierde el acceso y deja de recibir avisos.
 
 ## Storage
 
@@ -55,8 +54,8 @@ Dos buckets **privados**, sin URLs públicas. La app pide URLs firmadas que cadu
 
 | Bucket | Contenido | Ver | Subir | Borrar |
 |---|---|---|---|---|
-| `vehicle-photos` | foto del vehículo (≤ 1200 px, ≤ 5 MB) | miembros | admin | admin |
-| `attachments` | facturas, tarjeta ITV (imágenes y PDF, ≤ 10 MB) | miembros | miembros | admin · quien lo subió |
+| `vehicle-photos` | foto del vehículo (≤ 1200 px, ≤ 5 MB) | miembros | miembros | miembros |
+| `attachments` | facturas, tarjeta ITV (imágenes y PDF, ≤ 10 MB) | miembros | miembros | miembros |
 
 Los tipos MIME y el tamaño máximo se fuerzan en el propio bucket.
 
@@ -73,12 +72,11 @@ Trata la URL del calendario como una contraseña: quien la tenga ve los vencimie
 
 | Secreto | Dónde | En git |
 |---|---|---|
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | `.env` local y variables del hosting (públicas por diseño) | no (`.env.example` sí) |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | `.env` local y variables del hosting (públicas por diseño: van dentro del JavaScript) | no (`.env.example` sí) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Inyectada por Supabase en las Edge Functions | nunca |
 | `RESEND_API_KEY`, `RESEND_FROM`, `CRON_SECRET`, `APP_URL` | Secretos de Edge Functions (`supabase secrets set`) | no (`supabase/.env.example` sí) |
 
-## Cómo ampliar permisos (ejemplos)
+## Cómo cambiar permisos más adelante
 
-- **Que el encargado también registre ITV:** cambiar `is_admin()` por `is_member()` en las políticas `itv_inspections_insert` y en `attachments_insert` (rama `itv_inspection_id`), en una migración nueva.
-- **Un tercer rol** (p. ej. "consulta", solo lectura): ampliar el `check` de `profiles.role`, y ajustar `is_member()`/las políticas de escritura.
+- **Volver a tener roles** (p. ej. "solo consulta"): añadir la columna `role` a `profiles`, una función `has_role(...)` y cambiar `is_member()` por ella en las políticas de escritura, en una migración nueva.
 - Toda tabla nueva debe activar RLS y traer sus políticas **en la misma migración**.

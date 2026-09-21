@@ -39,7 +39,6 @@ export const STATUS_RANK = { overdue: 0, soon: 1, ok: 2 };
 
 /** Ajustes por defecto si aún no hay fila en notification_settings. */
 export const DEFAULT_SETTINGS = {
-  recipients: [],
   lead_days: [30, 15, 7],
   notify_on_due_day: true,
   weekly_overdue: true,

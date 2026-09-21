@@ -1,4 +1,4 @@
-// Alta y edición de vehículos (solo administradores). Baja lógica: nunca se borra.
+// Alta y edición de vehículos. Baja lógica: nunca se borra.
 
 import { VEHICLE_TYPES, usageUnitFor } from '@shared/constants.js';
 import { saveVehicle, setVehicleActive, signedUrls } from '../lib/api.js';

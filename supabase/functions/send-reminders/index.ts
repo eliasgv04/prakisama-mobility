@@ -72,8 +72,11 @@ Deno.serve(async (req) => {
     const snapshot = await fetchSnapshotWithRetry(supabase);
     const { items, settings } = buildFleetStatus(snapshot, today);
 
-    const recipients: string[] = [...new Set((settings.recipients as string[]).map((e) => e.trim().toLowerCase()).filter(Boolean))];
-    if (recipients.length === 0) return json({ ok: true, today, sent: 0, note: 'No hay destinatarios configurados en Ajustes.' });
+    // Los avisos los reciben TODOS los usuarios activos de la app.
+    const { data: people, error: peopleError } = await supabase.from('profiles').select('email').eq('active', true);
+    if (peopleError) throw new Error(`No se pudo leer los usuarios: ${peopleError.message}`);
+    const recipients: string[] = [...new Set((people ?? []).map((p: { email: string }) => p.email.trim().toLowerCase()).filter(Boolean))];
+    if (recipients.length === 0) return json({ ok: true, today, sent: 0, note: 'No hay usuarios activos a quienes avisar.' });
 
     // Historial de envíos (1 año) de estos destinatarios, paginado por el límite de filas de la API.
     const sentRows: { item_key: string; due_ref: string; stage: string; recipient: string; sent_on: string }[] = [];
