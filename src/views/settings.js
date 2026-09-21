@@ -3,14 +3,14 @@
 // a la vez y al guardar no se recarga la pantalla: se actualiza el resumen de la propia tarjeta.
 
 import { VEHICLE_TYPES } from '@shared/constants.js';
-import { isRuleUsable, itvAgeSequence } from '@shared/itv.js';
+import { describeItvRule, isRuleUsable, itvAgeSequence } from '@shared/itv.js';
 import { listProfiles, saveItvRule, saveSettings, updateProfile } from '../lib/api.js';
 import { friendlyError } from '../lib/errors.js';
 import { loadFleet } from '../lib/fleet.js';
 import { fmtDateTime, fmtNumber } from '../lib/format.js';
 import { roleLabel, session } from '../lib/session.js';
 import { accordion, makeExclusive } from '../ui/accordion.js';
-import { areaField, button, checkField, icon, readForm, section, selectField, textField, toInt } from '../ui/components.js';
+import { areaField, button, checkField, icon, iconButton, readForm, section, selectField, textField, toInt } from '../ui/components.js';
 import { h, toast } from '../ui/dom.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -219,11 +219,22 @@ function itvSummary(rules) {
   return { summary: parts.join(' · '), warn: configured < rules.length || unverified > 0 };
 }
 
+const ageList = (ages) => ages.map((n) => String(n).replace('.', ',')).join(', ');
+
 const exampleText = (rule) => {
   if (rule.applies === false) return 'No se controla la ITV de este tipo de vehículo.';
-  if (!isRuleUsable(rule)) return 'Rellena la primera ITV y cada cuántos años para ver el calendario.';
-  return `Toca ITV a los ${itvAgeSequence(rule, 7).join(', ')}… años de antigüedad.`;
+  if (!isRuleUsable(rule)) return 'Indica la primera ITV y al menos un tramo para ver el calendario.';
+  return `Toca ITV a los ${ageList(itvAgeSequence(rule, 9))}… años de antigüedad.`;
 };
+
+/** Frecuencias que se pueden elegir en un tramo (la norma solo usa estas). */
+const FREQUENCIES = [
+  [6, 'Semestral'],
+  [12, 'Anual'],
+  [24, 'Bienal'],
+  [36, 'Trienal'],
+  [48, 'Cuatrienal'],
+];
 
 function itvCard(rules) {
   const subs = rules.map((rule) => itvRuleCard(rule, () => card.set(itvSummary(rules))));
@@ -232,7 +243,10 @@ function itvCard(rules) {
     iconName: 'clipboard',
     title: 'Cada cuánto toca la ITV',
     ...itvSummary(rules),
-    content: [h('p', { class: 'muted' }, 'Cada tipo de vehículo tiene su calendario según los años que cumple desde la matriculación. Toca un tipo para verlo o cambiarlo.'), ...subs.map((s) => s.el)],
+    content: [
+      h('p', { class: 'muted' }, 'Según el artículo 6 del RD 920/2017, cada tipo de vehículo tiene su calendario según los años que cumple desde la matriculación. Toca un tipo para verlo o cambiarlo.'),
+      ...subs.map((s) => s.el),
+    ],
   });
   return card;
 }
@@ -243,13 +257,66 @@ function itvRuleCard(rule, onSaved) {
     if (state === 'off') return { summary: 'No se controla la ITV', warn: false, badge: null };
     if (state === 'unset') return { summary: 'Sin configurar', warn: true, badge: null };
     return {
-      summary: `ITV a los ${itvAgeSequence(r, 5).join(', ')}… años`,
+      summary: describeItvRule(r),
       warn: false,
       badge: r.verified ? h('span', { class: 'chip ok' }, 'Verificada') : h('span', { class: 'chip soon' }, 'A verificar'),
     };
   };
 
+  let steps = (rule.steps ?? []).map((step) => ({ ...step })); // copia editable
+  const stepsHost = h('div', { class: 'stack tight' });
   const example = h('div', { class: 'example', role: 'status' });
+
+  const currentRule = () => ({
+    applies: form.elements.applies.checked,
+    first_itv_years: form.elements.first_itv_years.value === '' ? null : Number(form.elements.first_itv_years.value),
+    steps,
+  });
+  const refreshExample = () => {
+    example.textContent = exampleText(currentRule());
+  };
+
+  function stepRow(step, index) {
+    const from = h('input', { type: 'number', inputmode: 'numeric', min: 0, step: 1, value: step.from_years ?? '', 'aria-label': `Tramo ${index + 1}: a partir de los (años)` });
+    from.addEventListener('input', () => {
+      step.from_years = from.value === '' ? null : Number(from.value);
+      refreshExample();
+    });
+    const options = FREQUENCIES.some(([months]) => months === step.every_months) ? FREQUENCIES : [...FREQUENCIES, [step.every_months, `Cada ${step.every_months} meses`]];
+    const frequency = h('select', { 'aria-label': `Tramo ${index + 1}: frecuencia` }, options.map(([months, label]) => h('option', { value: months }, label)));
+    frequency.value = String(step.every_months);
+    frequency.addEventListener('change', () => {
+      step.every_months = Number(frequency.value);
+      refreshExample();
+    });
+    return h(
+      'div',
+      { class: 'step' },
+      h('label', { class: 'field' }, h('span', { class: 'field-hint' }, 'A partir de los (años)'), from),
+      h('label', { class: 'field' }, h('span', { class: 'field-hint' }, 'ITV'), frequency),
+      iconButton('x', 'Quitar este tramo', () => {
+        steps.splice(index, 1);
+        renderSteps();
+      }),
+    );
+  }
+  function renderSteps() {
+    stepsHost.replaceChildren(
+      ...steps.map(stepRow),
+      button('Añadir tramo', {
+        variant: 'ghost',
+        small: true,
+        iconName: 'plus',
+        onClick: () => {
+          const last = steps.at(-1);
+          steps.push({ from_years: last ? (last.from_years ?? 0) + 4 : 0, every_months: 12 });
+          renderSteps();
+        },
+      }),
+    );
+    refreshExample();
+  }
+
   const save = saveButton('Guardar');
   const form = h(
     'form',
@@ -258,38 +325,37 @@ function itvRuleCard(rule, onSaved) {
       onsubmit: (event) => {
         event.preventDefault();
         const f = readForm(form);
+        if (steps.some((step) => step.from_years === null || !Number.isFinite(step.from_years) || step.from_years < 0)) {
+          return toast('Hay un tramo sin la antigüedad: rellénala o quita el tramo.', 'error');
+        }
         const patch = {
           applies: f.applies,
           first_itv_years: toInt(f.first_itv_years),
-          interval_years: toInt(f.interval_years),
-          switch_age_years: toInt(f.switch_age_years),
-          late_interval_years: toInt(f.late_interval_years) ?? 1,
+          steps: [...steps].sort((a, b) => a.from_years - b.from_years).map(({ from_years, every_months }) => ({ from_years, every_months })),
           verified: f.verified,
           notes: f.notes,
         };
         run(save, async () => {
           await saveItvRule(rule.vehicle_type, patch);
           Object.assign(rule, patch);
+          steps = patch.steps.map((step) => ({ ...step }));
+          renderSteps();
           card.set(describe(rule));
           onSaved();
         }, 'Calendario de ITV guardado');
       },
     },
     checkField('Calcular la ITV de este tipo', 'applies', rule.applies),
-    h('div', { class: 'row2' }, textField('Primera ITV a los (años)', 'first_itv_years', { type: 'number', inputmode: 'numeric', min: 0, value: rule.first_itv_years ?? '' }), textField('Después, cada (años)', 'interval_years', { type: 'number', inputmode: 'numeric', min: 1, value: rule.interval_years ?? '' })),
-    h('div', { class: 'row2' }, textField('Cambia de ritmo a los (años)', 'switch_age_years', { type: 'number', inputmode: 'numeric', min: 0, value: rule.switch_age_years ?? '', hint: 'Déjalo vacío si nunca cambia.' }), textField('Y desde entonces, cada (años)', 'late_interval_years', { type: 'number', inputmode: 'numeric', min: 1, value: rule.late_interval_years ?? 1 })),
+    textField('La primera ITV toca a los (años)', 'first_itv_years', { type: 'number', inputmode: 'numeric', min: 0, value: rule.first_itv_years ?? '', hint: 'Antigüedad del vehículo, contada desde la matriculación.' }),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Después, según su antigüedad'), stepsHost, h('span', { class: 'field-hint' }, 'Cada tramo indica cada cuánto se repite la ITV a partir de esa antigüedad: semestral = cada 6 meses, anual = cada año, bienal = cada 2 años.')),
     example,
-    checkField('Ya lo he comprobado con el RD 920/2017', 'verified', rule.verified),
+    checkField('Ya lo he comprobado con la normativa', 'verified', rule.verified),
     areaField('Notas', 'notes', { value: rule.notes ?? '' }),
     save,
   );
-  const refreshExample = () => {
-    const f = readForm(form);
-    example.textContent = exampleText({ applies: f.applies, first_itv_years: toInt(f.first_itv_years), interval_years: toInt(f.interval_years), switch_age_years: toInt(f.switch_age_years), late_interval_years: toInt(f.late_interval_years) ?? 1 });
-  };
-  form.addEventListener('input', refreshExample);
   form.addEventListener('change', refreshExample);
-  refreshExample();
+  form.addEventListener('input', refreshExample);
+  renderSteps();
 
   const card = accordion({ group: 'itv', sub: true, title: VEHICLE_TYPES[rule.vehicle_type]?.label ?? rule.vehicle_type, ...describe(rule), content: form });
   return card;

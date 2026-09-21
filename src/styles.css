@@ -308,3 +308,9 @@ h3 { font-family: var(--font-title); font-weight: 800; font-size: 24px; letter-s
 .acc-body > .muted:first-child { margin-bottom: 12px; }
 .example { background: var(--info-bg); color: var(--azul); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 15px; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .acc-chev { transition: none; } }
+
+/* Tramos de la regla de ITV */
+.step { display: grid; grid-template-columns: 1fr 1.6fr auto; gap: 8px; align-items: end; padding: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.step .field { gap: 4px; }
+.step .icon-btn { width: 44px; height: 44px; margin-bottom: 4px; color: var(--overdue); }
+@media (max-width: 380px) { .step { grid-template-columns: 1fr 1fr auto; } }

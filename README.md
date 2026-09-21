@@ -174,15 +174,23 @@ La fecha de la próxima ITV sale de, por este orden de prioridad:
 2. **Última inspección registrada:** si fue favorable, la caducidad de la tarjeta (*Según tarjeta ITV*). Si fue desfavorable o negativa, se marca que hay que repetirla. Al registrar una ITV favorable se borra la fecha manual.
 3. **Calculada:** desde la fecha de primera matriculación y las reglas de la tabla `itv_rules` (*Calculada*). Si no hay ninguna ITV registrada se asume que las anteriores se pasaron a tiempo y se etiqueta como *estimada*.
 
-Las reglas de periodicidad son datos (editables en **Ajustes → Cada cuánto toca la ITV**), no código:
+Las reglas de periodicidad son datos (editables en **Ajustes → Cada cuánto toca la ITV**), no código. Cada regla es la antigüedad de la primera ITV más una lista de **tramos** ("a partir de los X años, cada N meses"), que es como está redactada la norma. Valores precargados, **comprobados el 21/09/2026 en el texto consolidado del BOE** (artículo 6.1 del [RD 920/2017](https://www.boe.es/buscar/act.php?id=BOE-A-2017-12841); la tabla no ha cambiado desde 2017, la última modificación de 2024 solo afecta a los vehículos históricos, apartado 6.2):
 
-| Tipo | Primera ITV | Después | Cambio de tramo |
+| Tipo en la app | Categoría del RD | Primera ITV | Frecuencia según antigüedad |
 |---|---|---|---|
-| Turismo | 4 años | cada 2 | a los 10 años pasa a anual |
-| Furgoneta / ≤ 3.500 kg | 2 años | cada 2 | a los 6 años pasa a anual |
-| Camión > 3.500 kg, maquinaria, otro | sin configurar | | |
+| Turismo | M1 (hasta 8 plazas) | a los 4 años | bienal de 4 a 10 · **anual** desde los 10 |
+| Furgoneta / mercancías ≤ 3.500 kg | N1 | a los 2 años | bienal de 2 a 6 · anual de 6 a 10 · **semestral** desde los 10 |
+| Camión > 3.500 kg | N2 y N3 (y remolques O2, O3, O4) | **al año** (sin exención) | anual hasta los 10 · **semestral** desde los 10 |
+| Maquinaria | Vehículos especiales de obras y servicios y maquinaria automotriz **con velocidad por construcción ≥ 25 km/h** | a los 4 años | bienal de 4 a 10 · anual desde los 10 |
+| Otro | — | sin configurar | según el caso |
 
-> ⚠ Los valores precargados son **orientativos y están marcados "a verificar con el RD 920/2017"**. Contrástalos con la normativa vigente y márcalos como verificados. Camiones y maquinaria se dejan vacíos a propósito.
+Cosas a tener en cuenta:
+
+- **Maquinaria lenta (< 25 km/h) no pasa ITV**: en esos vehículos desmarca "Controlar la ITV" (la app lo recuerda en el formulario).
+- **No cubre casos con frecuencia propia**: taxis, ambulancias, transporte escolar y autoescuelas (más exigentes), caravanas remolcadas, motos, tractores y maquinaria agrícola (exentos 4 u 8 años, bienal hasta 16 y anual después). Para esos usa el tipo "Otro" y configura sus tramos.
+- **La antigüedad se cuenta desde la primera matriculación** y la frecuencia depende de la antigüedad *en la fecha de la inspección*. Esto es una estimación: en cuanto registras una ITV, manda la caducidad de la tarjeta. En el límite de un tramo (justo a los 10 años) la app aplica el tramo nuevo, que es la lectura más prudente: avisa antes.
+- Una ITV pasada en los 30 días anteriores a la caducidad no pierde tiempo: la nueva validez se suma a la fecha de caducidad anterior (art. 6.5). Como la app usa la caducidad de la tarjeta, ya lo refleja.
+- **Reforma europea en trámite**: la Comisión propuso en abril de 2025 revisar el paquete de ITV (Consejo y Parlamento aún negocian). Si llega a España, basta con editar los tramos en Ajustes.
 
 ### Mantenimiento
 

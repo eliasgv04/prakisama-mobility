@@ -1,47 +1,60 @@
 // Cálculo de la próxima ITV. Funciones puras: no leen la BD ni el reloj.
 //
-// Las reglas de periodicidad NO están aquí: vienen de la tabla `itv_rules` (una fila por tipo).
-// Modelo de una regla (columnas de itv_rules):
-//   first_itv_years      años desde la matriculación hasta la primera ITV
-//   interval_years       periodicidad (años) hasta llegar a `switch_age_years`
-//   switch_age_years     antigüedad (años) a partir de la cual pasa a `late_interval_years` (null = nunca)
-//   late_interval_years  periodicidad a partir de esa antigüedad (normalmente 1 = anual)
-//   applies              false = a este tipo no se le calcula ITV
+// Las reglas de periodicidad NO están aquí: vienen de la tabla `itv_rules` (una fila por tipo) y se
+// pueden editar en la app. Origen de los valores por defecto: art. 6.1 del RD 920/2017.
 //
-// Ejemplo turismo (4, 2, 10, 1): ITV a los 4, 6, 8, 10, 11, 12, 13... años de antigüedad.
+// Modelo de una regla (columnas de itv_rules):
+//   first_itv_years  antigüedad (años desde la matriculación) a la que toca la primera ITV
+//   steps            tramos [{ from_years, every_months }]: "a partir de los `from_years` años, cada
+//                    `every_months` meses". En cada ITV manda el último tramo ya cumplido.
+//   applies          false = a este tipo no se le calcula ITV
+//
+// Ejemplo furgoneta N1: first_itv_years 2, steps [{2,24},{6,12},{10,6}] →
+//   ITV a los 2, 4, 6, 7, 8, 9, 10 años y, desde entonces, cada 6 meses: 10,5 · 11 · 11,5…
+//
+// Matiz de la norma: la frecuencia depende de la antigüedad EN LA FECHA DE LA INSPECCIÓN y el plazo
+// real lo fija la tarjeta ITV (por eso, en cuanto hay una inspección registrada, manda su caducidad).
+// Esta secuencia es la estimación desde la matriculación, y en el límite de un tramo (p. ej. justo a
+// los 10 años) aplica el tramo nuevo: es la lectura más prudente, avisa antes.
 
-import { addDays, addMonths, addYears } from './dates.js';
+import { addDays, addMonths } from './dates.js';
 
-/** ¿Se puede calcular con esta regla? (camiones y maquinaria empiezan sin valores). */
+const isNum = (n) => typeof n === 'number' && Number.isFinite(n);
+
+/** Tramos válidos y ordenados por antigüedad de inicio. */
+export function ruleSteps(rule) {
+  const steps = Array.isArray(rule?.steps) ? rule.steps : [];
+  return steps
+    .filter((s) => s && isNum(s.from_years) && s.from_years >= 0 && isNum(s.every_months) && s.every_months > 0)
+    .sort((a, b) => a.from_years - b.from_years);
+}
+
+/** ¿Se puede calcular con esta regla? (los tipos sin configurar no). */
 export function isRuleUsable(rule) {
-  return Boolean(
-    rule &&
-      rule.applies !== false &&
-      Number.isFinite(rule.first_itv_years) &&
-      rule.first_itv_years >= 0 &&
-      Number.isFinite(rule.interval_years) &&
-      rule.interval_years > 0 &&
-      (rule.late_interval_years == null || rule.late_interval_years > 0),
-  );
+  return Boolean(rule && rule.applies !== false && isNum(rule.first_itv_years) && rule.first_itv_years >= 0 && ruleSteps(rule).length > 0);
 }
 
-/** Antigüedad (en años) de la ITV siguiente a la de antigüedad `age`. */
-export function nextItvAge(age, rule) {
-  const switchAge = rule.switch_age_years;
-  const late = rule.late_interval_years ?? 1;
-  return switchAge != null && age >= switchAge ? age + late : age + rule.interval_years;
+/** Tramo aplicable a una antigüedad (en meses): el último cuyo inicio ya se ha cumplido. */
+export function stepFor(ageMonths, steps) {
+  let chosen = steps[0];
+  for (const step of steps) if (step.from_years * 12 <= ageMonths) chosen = step;
+  return chosen;
 }
 
-/** Primeras `count` antigüedades en las que toca ITV según la regla. */
-export function itvAgeSequence(rule, count) {
-  const ages = [];
-  let age = rule.first_itv_years;
+/** Antigüedades (en meses desde la matriculación) de las primeras `count` ITV. */
+export function itvMonthSequence(rule, count) {
+  const steps = ruleSteps(rule);
+  const months = [];
+  let m = Math.round(rule.first_itv_years * 12);
   for (let i = 0; i < count; i++) {
-    ages.push(age);
-    age = nextItvAge(age, rule);
+    months.push(m);
+    m += stepFor(m, steps).every_months;
   }
-  return ages;
+  return months;
 }
+
+/** Igual, en años (puede haber medios años: 10,5). Para mostrar ejemplos. */
+export const itvAgeSequence = (rule, count) => itvMonthSequence(rule, count).map((m) => m / 12);
 
 /**
  * Primera fecha de ITV, calculada desde la matriculación, que sea igual o posterior a `fromIso`.
@@ -53,13 +66,36 @@ export function itvAgeSequence(rule, count) {
  */
 export function nextItvFromRegistration(registrationIso, rule, fromIso) {
   if (!registrationIso || !isRuleUsable(rule)) return null;
-  let age = rule.first_itv_years;
-  for (let i = 0; i < 200; i++) {
-    const date = addYears(registrationIso, age);
+  const steps = ruleSteps(rule);
+  let m = Math.round(rule.first_itv_years * 12);
+  for (let i = 0; i < 400; i++) {
+    const date = addMonths(registrationIso, m);
     if (date >= fromIso) return date;
-    age = nextItvAge(age, rule);
+    m += stepFor(m, steps).every_months;
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Texto legible de una regla
+// ---------------------------------------------------------------------------
+
+const FREQUENCY_NAMES = { 6: 'semestral', 12: 'anual', 24: 'bienal', 36: 'trienal', 48: 'cuatrienal' };
+const yearsText = (n) => `${String(n).replace('.', ',')} ${n === 1 ? 'año' : 'años'}`;
+
+/** 12 → "anual", 6 → "semestral", 18 → "cada 18 meses". */
+export const frequencyName = (months) => FREQUENCY_NAMES[months] ?? `cada ${months} meses`;
+
+/** "1.ª ITV a los 2 años · bienal de 2 a 6 · anual de 6 a 10 · semestral desde los 10" */
+export function describeItvRule(rule) {
+  if (!isRuleUsable(rule)) return null;
+  const steps = ruleSteps(rule);
+  const parts = [`1.ª ITV a los ${yearsText(rule.first_itv_years)}`];
+  steps.forEach((step, i) => {
+    const next = steps[i + 1];
+    parts.push(`${frequencyName(step.every_months)} ${next ? `de ${step.from_years} a ${next.from_years}` : `desde los ${step.from_years}`}`);
+  });
+  return parts.join(' · ');
 }
 
 /** Orden: inspección más reciente primero. */

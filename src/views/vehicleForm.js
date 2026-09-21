@@ -101,8 +101,11 @@ export default async function vehicleForm({ params }) {
     required: true,
     onChange: (event) => updateUsageLabel(event.target.value),
   });
+  // Maquinaria: solo pasa ITV si por construcción puede circular a 25 km/h o más (RD 920/2017, art. 6.1).
+  const machineryHint = h('p', { class: 'field-hint', hidden: v.vehicle_type !== 'maquinaria' }, 'La maquinaria de obra solo pasa ITV si por construcción puede circular a 25 km/h o más. Si la tuya es más lenta, desmarca esta casilla.');
   function updateUsageLabel(type) {
     usageLabel.textContent = usageUnitFor(type) === 'h' ? 'Horas de uso actuales' : 'Kilómetros actuales';
+    machineryHint.hidden = type !== 'maquinaria';
   }
   updateUsageLabel(v.vehicle_type);
 
@@ -163,6 +166,7 @@ export default async function vehicleForm({ params }) {
     gvw,
     h('label', { class: 'field' }, usageLabel, usageInput),
     checkField('Controlar la ITV de este vehículo', 'itv_enabled', v.itv_enabled),
+    machineryHint,
     areaField('Notas', 'notes', { value: v.notes ?? '' }),
     save,
   );
