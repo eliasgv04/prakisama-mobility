@@ -16,13 +16,23 @@ const TABS = [
 /**
  * Una "vista" es { title, node, back?, actions?, tab?, offline?, cachedAt?, bare?, hideTitle? }.
  * `back` es la ruta a la que vuelve la flecha; `bare` oculta barras (pantalla de acceso);
- * `hideTitle` no pinta el titular grande (la ficha del vehículo ya muestra la matrícula).
+ * `hideTitle` no pinta el titular grande (la ficha del vehículo ya muestra la matrícula);
+ * `wide` usa todo el ancho en pantallas grandes (listas y panel).
  */
 export function createShell(root) {
   const backSlot = h('div');
   const actionsSlot = h('div', { style: 'display:flex' });
-  const brand = h('a', { class: 'brand', href: '#/', 'aria-label': 'Prakisama Mobility: ir al panel' }, h('img', { src: logoUrl, alt: 'Prakisama, S.L. Construcciones', width: 100, height: 36 }));
-  const topbar = h('header', { class: 'topbar' }, backSlot, brand, actionsSlot);
+  // Logo + "MOBILITY": la marca de la empresa y el nombre de la app, juntos.
+  const brand = h(
+    'a',
+    { class: 'brand', href: '#/', 'aria-label': 'Prakisama Mobility: ir al panel' },
+    h('img', { src: logoUrl, alt: 'Prakisama, S.L. Construcciones', width: 100, height: 36 }),
+    h('span', { class: 'brand-sep', 'aria-hidden': 'true' }),
+    h('span', { class: 'brand-name' }, 'Mobility'),
+  );
+  // En pantallas anchas el menú va arriba (como en prakisama.com); en el móvil, en la barra inferior.
+  const topnav = h('nav', { class: 'topnav', 'aria-label': 'Navegación principal' });
+  const topbar = h('header', { class: 'topbar' }, h('div', { class: 'topbar-in' }, backSlot, brand, topnav, actionsSlot));
   const main = h('main', { class: 'main', id: 'main' });
   const tabbar = h('nav', { class: 'tabbar', 'aria-label': 'Navegación principal' });
   const shell = h('div', { class: 'shell' }, topbar, main, tabbar);
@@ -30,8 +40,11 @@ export function createShell(root) {
 
   function renderTabs(active) {
     clear(tabbar);
+    clear(topnav);
     for (const tab of TABS) {
-      tabbar.append(h('a', { href: `#${tab.path}`, 'aria-current': tab.id === active ? 'page' : null }, icon(tab.icon), tab.label));
+      const current = tab.id === active ? 'page' : null;
+      tabbar.append(h('a', { href: `#${tab.path}`, 'aria-current': current }, icon(tab.icon), tab.label));
+      topnav.append(h('a', { href: `#${tab.path}`, 'aria-current': current }, tab.label));
     }
   }
 
@@ -60,6 +73,7 @@ export function createShell(root) {
       for (const action of view.actions ?? []) actionsSlot.append(action);
       renderTabs(view.tab);
 
+      main.className = view.wide ? 'main wide' : 'main';
       clear(main);
       if (view.title && !bare && !view.hideTitle) main.append(h('h1', { class: 'page-title' }, view.title));
       if (view.offline) {

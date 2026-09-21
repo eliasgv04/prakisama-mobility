@@ -24,23 +24,24 @@ export default async function vehicleDetail({ params }) {
   const settings = fleet.status.settings;
   const online = !fleet.offline;
 
-  const node = h('div', {});
-  node.append(heroCard(vehicle, entry, fleet));
-  node.append(itvCard({ vehicle, entry, itv, settings, online }));
-  node.append(usageCard({ vehicle, entry, settings, online }));
-  node.append(rulesCard({ vehicle, rules, entry, settings, canEdit: online }));
+  // Dos columnas en pantalla ancha (datos, ITV y km | mantenimiento e historial); una sola en el móvil.
+  const left = h('div', { class: 'col' });
+  const right = h('div', { class: 'col' });
+  const node = h('div', { class: 'detail-grid' }, left, right);
+  left.append(heroCard(vehicle, entry, fleet), itvCard({ vehicle, entry, itv, settings, online }), usageCard({ vehicle, entry, settings, online }));
+  right.append(rulesCard({ vehicle, rules, entry, settings, canEdit: online }));
 
   // El historial se carga aparte para que la ficha aparezca al instante.
   const historyHost = h('div', {});
-  node.append(section('Historial', historyHost));
+  right.append(section('Historial', historyHost));
   if (online) loadHistory(historyHost, vehicle);
   else historyHost.append(h('div', { class: 'card muted' }, 'El historial no está disponible sin conexión.'));
 
   if (online) {
-    node.append(h('div', { class: 'spacer' }), button('Editar vehículo', { variant: 'ghost', block: true, iconName: 'edit', onClick: () => navigate(`/vehiculos/${vehicle.id}/editar`) }));
+    right.append(h('div', { class: 'spacer' }), button('Editar vehículo', { variant: 'ghost', block: true, iconName: 'edit', onClick: () => navigate(`/vehiculos/${vehicle.id}/editar`) }));
   }
 
-  return { title: displayPlate(vehicle.plate), hideTitle: true, back: '/vehiculos', tab: 'vehiculos', node, offline: fleet.offline, cachedAt: fleet.cachedAt };
+  return { title: displayPlate(vehicle.plate), hideTitle: true, wide: true, back: '/vehiculos', tab: 'vehiculos', node, offline: fleet.offline, cachedAt: fleet.cachedAt };
 }
 
 // ---------------------------------------------------------------------------

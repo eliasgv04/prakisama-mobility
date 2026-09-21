@@ -17,7 +17,7 @@ export default async function dashboard() {
   const entries = [...status.byVehicle.values()].filter((e) => e.vehicle.active);
 
   let filter = null; // 'overdue' | 'soon' | 'ok' | null
-  const listHost = h('div');
+  const listHost = h('div', { class: 'list-grid' });
   const tileHost = h('div', { class: 'tiles', role: 'group', 'aria-label': 'Resumen por estado' });
 
   function renderTiles() {
@@ -66,14 +66,31 @@ export default async function dashboard() {
   const stale = entries.filter((e) => e.rules.some((r) => r.rule.every_usage && r.usageIsStale));
   const noItv = entries.filter((e) => e.itv.applies && !e.itv.dueDate);
 
-  const node = h('div', {}, tileHost, section('Vencimientos', listHost));
+  // Portada: fecha de hoy y cuántos vencimientos piden atención.
+  const attention = status.counts.overdue + status.counts.soon;
+  const today = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  const summary =
+    status.items.length === 0
+      ? 'Añade vehículos para ver aquí sus vencimientos.'
+      : attention === 0
+        ? 'Toda la flota está al día.'
+        : `${attention === 1 ? '1 vencimiento pide' : `${attention} vencimientos piden`} atención.`;
+  const hero = h(
+    'div',
+    { class: 'hero-band' },
+    h('div', { class: 'eyebrow' }, 'Panel de control'),
+    h('h1', {}, 'Estado de la flota'),
+    h('p', {}, `${today.charAt(0).toUpperCase()}${today.slice(1)} · `, h('strong', {}, summary)),
+  );
+
+  const node = h('div', {}, hero, tileHost, section('Vencimientos', listHost));
 
   if (stale.length) {
     node.append(
       section(
         `Km sin actualizar (${stale.length})`,
         h('p', { class: 'muted', style: 'margin:0 4px 8px' }, 'Los avisos por km dependen de que el contador esté al día.'),
-        ...stale.slice(0, MAX_ROWS).map((entry) =>
+        h('div', { class: 'list-grid' }, ...stale.slice(0, MAX_ROWS).map((entry) =>
           h(
             'div',
             { class: 'item' },
@@ -85,7 +102,7 @@ export default async function dashboard() {
             ),
             offline ? null : button('Actualizar', { small: true, onClick: () => openUsageSheet(entry.vehicle) }),
           ),
-        ),
+        )),
         stale.length > MAX_ROWS ? h('p', { class: 'muted', style: 'margin:8px 4px' }, `…y ${stale.length - MAX_ROWS} más en Vehículos.`) : null,
       ),
     );
@@ -96,17 +113,17 @@ export default async function dashboard() {
       section(
         `ITV sin fecha (${noItv.length})`,
         h('p', { class: 'muted', style: 'margin:0 4px 8px' }, 'No se puede calcular la próxima ITV: falta la matriculación o la regla de ese tipo.'),
-        ...noItv.slice(0, MAX_ROWS).map((entry) =>
+        h('div', { class: 'list-grid' }, ...noItv.slice(0, MAX_ROWS).map((entry) =>
           h(
             'a',
             { class: 'item', href: `#/vehiculos/${entry.vehicle.id}` },
             h('div', { class: 'grow' }, h('span', { class: 'plate' }, displayPlate(entry.vehicle.plate))),
             h('span', { class: 'chip neutral' }, entry.itv.reason === 'no_registration' ? 'Falta matriculación' : 'Sin regla'),
           ),
-        ),
+        )),
       ),
     );
   }
 
-  return { title: 'Panel', node, tab: 'panel', offline, cachedAt };
+  return { title: 'Panel', node, tab: 'panel', offline, cachedAt, wide: true, hideTitle: true };
 }

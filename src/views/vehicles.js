@@ -13,7 +13,7 @@ export default async function vehiclesList() {
 
   let text = '';
   let showInactive = false;
-  const listHost = h('div');
+  const listHost = h('div', { class: 'list-grid' });
   const thumbs = new Map(); // photo_path → cajas de miniatura por rellenar
 
   const matches = (entry) => {
@@ -84,5 +84,5 @@ export default async function vehiclesList() {
   }
   renderList();
 
-  return { title: 'Vehículos', node, tab: 'vehiculos', offline, cachedAt };
+  return { title: 'Vehículos', node, tab: 'vehiculos', offline, cachedAt, wide: true };
 }
