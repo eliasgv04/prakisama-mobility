@@ -23,7 +23,7 @@ src/                     frontend (JS vanilla, ES modules)
   ui/                    helpers DOM (h()), componentes, toasts, diálogos
   views/                 una pantalla por archivo
 supabase/
-  migrations/            esquema versionado (1 esquema, 2 RLS, 3 storage, 4 extensiones)
+  migrations/            esquema versionado (1 esquema, 2 RLS, 3 storage, 4 extensiones, 5 endurecer funciones)
   functions/_shared/     LÓGICA PURA compartida frontend + Edge Functions (fechas, ITV, mantenimiento, avisos, .ics)
   functions/send-reminders/   email diario (lo llama pg_cron)
   functions/calendar-feed/    feed .ics por usuario con token revocable
@@ -61,10 +61,20 @@ El alias `@shared` de Vite apunta a `supabase/functions/_shared`. **Toda la lóg
 
 - [x] Fase 1 — proyecto, esquema, Auth, RLS, CRUD de vehículos con foto, cálculo de ITV
 - [x] Fase 2 — mantenimiento, averías, reglas, panel con semáforo
-- [x] Fase 3 — emails programados y feed .ics (código escrito; falta desplegar y probar con Resend real)
+- [x] Fase 3 — emails programados y feed .ics
 - [x] Fase 4 — PWA, README y documentación
-- [ ] **Pendiente**: aplicar las migraciones en el proyecto Supabase real, crear el primer admin, desplegar las Edge Functions, programar el cron y desplegar el frontend (ver README).
-- La interfaz se ha recorrido en un navegador headless contra un servidor de pruebas local (login, panel, altas, registros, ITV, reglas, ajustes, offline), pero **el SQL, la RLS y las Edge Functions aún no se han ejecutado contra Supabase real**. Primera prueba real: migraciones → login → alta de un vehículo → `send-reminders?dry_run=1`.
+
+### Proyecto Supabase real: "Prakisama Mobility" (ref `wlbqtnmwlljrpkixuaqj`, región eu-west-1)
+
+- [x] Migraciones 1-5 aplicadas (`supabase db push`). RLS activo en las 9 tablas; buckets `vehicle-photos` y `attachments` privados.
+- [x] Auth: registro público desactivado; `site_url` = `http://localhost:5173` (**cambiar a la URL de producción al desplegar**, y el secreto `APP_URL`).
+- [x] Edge Functions `send-reminders` y `calendar-feed` desplegadas (`--use-api --no-verify-jwt`). Secretos puestos: `CRON_SECRET`, `APP_URL`. **Faltan `RESEND_API_KEY` y `RESEND_FROM`** (sin ellos `send-reminders` no envía; `dry_run` sí funciona).
+- [x] Cron `flota-enviar-avisos` programado a las 06:00 UTC (URL y secreto en Vault). Verificada la cadena cron → pg_net → función.
+- [x] Verificado contra el proyecto real con usuarios de prueba (ya borrados): 38 comprobaciones de RLS como anónimo/encargado, 14 como admin (triggers de ITV, restricciones, tramos de aviso d30/d15/d7/d0/overdue), y 21 + 11 flujos de interfaz como admin y encargado (subida de fotos y adjuntos a Storage incluida).
+- [ ] Pendiente: destinatarios de avisos (Ajustes), Resend, desplegar el frontend (Cloudflare Pages) y crear más usuarios.
+
+Notas de operación: aplicar migraciones con `SUPABASE_ACCESS_TOKEN=… npx supabase db push --linked`; redesplegar una función con `npx supabase functions deploy <nombre> --use-api --no-verify-jwt`. `.env` y `supabase/.env` (gitignorados) contienen la anon key y el `CRON_SECRET`.
+
 - Futuro: notificaciones push (en iOS solo con la app instalada en pantalla de inicio), servicio real para `lookupMatricula`, verificar las reglas de ITV con el RD 920/2017.
 
 ---

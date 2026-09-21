@@ -45,7 +45,9 @@ RLS decide por **fila**, no por **columna**. Para esos casos hay triggers y func
 | Rotar el token del calendario | `rotate_calendar_token()` (solo el propio perfil) |
 | Registrar ITV favorable sustituye la fecha manual | Trigger `itv_clear_manual_date` (solo si es la inspección más reciente) |
 
-Las funciones con `SECURITY DEFINER` tienen `EXECUTE` revocado a `public` y `anon`; solo `authenticated`.
+Las funciones con `SECURITY DEFINER` tienen `EXECUTE` revocado a `public` y `anon` (migraciones 2 y 5): las de uso desde la app (`set_vehicle_usage`, `rotate_calendar_token`, `is_admin`, `is_member`) solo para `authenticated`, y las de trigger para nadie (Postgres no comprueba `EXECUTE` al dispararlas).
+
+> Verificado contra el proyecto real: un anónimo no puede leer ninguna tabla, ni llamar a ninguna función, ni acceder a los buckets; un encargado no puede crear/editar/borrar vehículos, registrar ITV, tocar reglas ni ajustes, ni hacerse admin editando su perfil.
 
 ## Storage
 

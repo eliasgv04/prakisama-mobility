@@ -50,9 +50,12 @@ export default async function vehiclesList() {
 
   async function loadPhotos() {
     if (offline || thumbs.size === 0) return;
-    const urls = await signedUrls('vehicle-photos', [...thumbs.keys()]);
-    for (const [path, boxes] of thumbs) for (const box of boxes) if (box.isConnected) fillThumb(box, urls[path]);
+    // Se rellenan aunque la lista aún no esté en la página: si las URLs ya estaban en caché esto
+    // se ejecuta antes de que la pantalla se monte, y los nodos se montarán ya con su foto.
+    const pending = new Map(thumbs);
     thumbs.clear();
+    const urls = await signedUrls('vehicle-photos', [...pending.keys()]);
+    for (const [path, boxes] of pending) for (const box of boxes) fillThumb(box, urls[path]);
   }
 
   const search = h('input', {
