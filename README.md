@@ -5,7 +5,7 @@ App web instalable (PWA) para controlar la **ITV** y el **mantenimiento** de la 
 - **Frontend:** JavaScript vanilla (ES modules) + Vite. Única dependencia de runtime: `@supabase/supabase-js`.
 - **Backend:** Supabase (Postgres, Auth, Storage, Edge Functions, pg_cron).
 - **Email:** Resend, llamado desde una Edge Function.
-- **Hosting recomendado:** Cloudflare Pages (gratis).
+- **Hosting:** GitHub Pages (gratis), con publicación automática.
 
 > Más contexto del proyecto y decisiones de diseño: [CLAUDE.md](CLAUDE.md). Políticas de seguridad: [docs/seguridad-rls.md](docs/seguridad-rls.md).
 
@@ -145,15 +145,20 @@ Cada usuario tiene un enlace personal en **Cuenta → Calendario** (`…/functio
 
 ## 7. Desplegar el frontend
 
-**Cloudflare Pages** (gratis, ancho de banda ilimitado):
+**GitHub Pages** (gratis), con publicación automática. El flujo está en [.github/workflows/deploy.yml](.github/workflows/deploy.yml): cada vez que se sube algo a `main`, GitHub compila la app y la publica en `https://USUARIO.github.io/REPOSITORIO/`.
 
-1. Sube el repositorio a GitHub.
-2. Cloudflare → Workers & Pages → Create → Pages → Connect to Git.
-3. Build command: `npm run build` · Output directory: `dist`.
-4. Variables de entorno (Production): `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
-5. Pon la URL resultante (o tu dominio) en Supabase → Auth → URL Configuration y en el secreto `APP_URL`.
+Configuración (una sola vez, en el repositorio de GitHub):
 
-La app usa rutas por hash (`#/vehiculos`) y rutas relativas, así que funciona en cualquier hosting estático sin reglas de reescritura (Netlify y Vercel valen igual).
+1. **Settings → Pages → Build and deployment → Source: "GitHub Actions".**
+2. **Settings → Secrets and variables → Actions → pestaña *Variables*:** crea `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`. La clave anon es pública (va dentro del JavaScript); nunca pongas aquí la service role ni la de Resend.
+3. Sube el código a `main` y espera a que termine la acción (pestaña *Actions*).
+4. En **Supabase → Authentication → URL Configuration** pon como *Site URL* la dirección publicada (con la barra final) y añádela a *Redirect URLs*. Pon esa misma dirección en el secreto `APP_URL` (`supabase/.env` → `npx supabase secrets set --env-file supabase/.env`).
+
+Notas:
+
+- **Un repositorio gratuito tiene que ser público para usar Pages.** Publicar el código no expone nada sensible: no hay secretos en él y la seguridad la da RLS en la base de datos, no ocultar el código. Para un repositorio privado hace falta un plan de pago de GitHub.
+- **Dominio propio** (p. ej. `mobility.prakisama.com`): Settings → Pages → Custom domain y un registro DNS `CNAME` hacia `USUARIO.github.io`. Después actualiza la URL en Supabase y en `APP_URL`.
+- La app usa rutas por hash (`#/vehiculos`) y rutas relativas, así que funciona colgando de una subruta y en cualquier otro hosting estático sin reglas de reescritura (Cloudflare Pages, Netlify o Vercel valen igual: build `npm run build`, salida `dist`, y las dos variables de entorno).
 
 ## 8. Instalar la app en el móvil
 
