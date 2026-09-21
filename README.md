@@ -156,7 +156,8 @@ Configuración (una sola vez, en el repositorio de GitHub):
 
 Notas:
 
-- **Un repositorio gratuito tiene que ser público para usar Pages.** Publicar el código no expone nada sensible: no hay secretos en él y la seguridad la da RLS en la base de datos, no ocultar el código. Para un repositorio privado hace falta un plan de pago de GitHub.
+- **Con el plan gratuito de GitHub el repositorio tiene que ser público para usar Pages; con GitHub Pro/Team puede ser privado** (este proyecto está en un repositorio privado). En cualquier caso la web publicada es pública. Publicar el código tampoco expondría nada sensible: no hay secretos en él y la seguridad la da RLS en la base de datos, no ocultar el código.
+- **Publicación actual:** https://eliasgv04.github.io/prakisama-mobility/ (repositorio `eliasgv04/prakisama-mobility`). Para publicar un cambio basta con hacer `git push` a `main`.
 - **Dominio propio** (p. ej. `mobility.prakisama.com`): Settings → Pages → Custom domain y un registro DNS `CNAME` hacia `USUARIO.github.io`. Después actualiza la URL en Supabase y en `APP_URL`.
 - La app usa rutas por hash (`#/vehiculos`) y rutas relativas, así que funciona colgando de una subruta y en cualquier otro hosting estático sin reglas de reescritura (Cloudflare Pages, Netlify o Vercel valen igual: build `npm run build`, salida `dist`, y las dos variables de entorno).
 
