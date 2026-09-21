@@ -94,7 +94,7 @@ function itvCard({ vehicle, entry, itv, settings, admin, online }) {
         { class: 'muted' },
         itv.reason === 'no_registration'
           ? 'Falta la fecha de matriculación para calcular la ITV. Edita el vehículo o pon una fecha manual.'
-          : 'No hay regla de ITV para este tipo de vehículo. Configúrala en Ajustes → Reglas de ITV o pon una fecha manual.',
+          : 'No hay regla de ITV para este tipo de vehículo. Configúrala en Ajustes → Cada cuánto toca la ITV, o pon una fecha manual.',
       ),
     );
   } else {

@@ -58,6 +58,7 @@ Nombre de la app: **Prakisama Mobility** (nombre corto en el móvil: "Mobility")
 - **Email**: Resend, un email-resumen por destinatario al día, con `Idempotency-Key`. **Hosting**: Cloudflare Pages.
 - **Cálculo de ITV**: prioridad manual > última inspección (caducidad de la tarjeta) > cálculo por matriculación y `itv_rules`. Sin inspecciones registradas se asume que las anteriores se pasaron a tiempo y se marca la fecha como "estimada".
 - **Encargado**: ve todo, registra mantenimientos/averías con adjuntos y actualiza km. No crea ni edita vehículos, ni reglas, ni inspecciones de ITV, ni ajustes (fácil de ampliar en `supabase/migrations/…_rls_politicas.sql`).
+- **Ajustes en tarjetas plegables** (`src/ui/accordion.js`, `<details>`): cerradas muestran un resumen del estado; solo una abierta a la vez; al guardar no se recarga la pantalla, se actualiza el resumen. Usar este patrón para pantallas de configuración largas.
 - **`lookupMatricula(matricula)`** (`src/lib/lookupMatricula.js`) es `async` y devuelve `null`; punto de extensión para un servicio externo futuro. No hay ninguna API inventada.
 - **Sin tests unitarios**: el brief pedía Vitest, pero el usuario decidió no hacerlos (no añadirlos salvo que los pida). La lógica sigue siendo pura y aislada en `_shared/`, así que añadirlos más adelante es trivial.
 

@@ -222,6 +222,7 @@ textarea { min-height: 96px; resize: vertical; }
 select { background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%); background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size: 6px 6px; background-repeat: no-repeat; padding-right: 36px; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px #07429028; }
 .check { display: flex; align-items: center; gap: 12px; min-height: var(--tap); font-weight: 600; }
+.check + .check { margin-top: -8px; }
 .check input { width: 26px; height: 26px; accent-color: var(--azul); flex: none; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 380px) { .row2 { grid-template-columns: 1fr; } }
@@ -279,3 +280,31 @@ dialog h3 { font-family: var(--font-title); font-weight: 800; font-size: 26px; m
 .url-box { word-break: break-all; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px; }
 table.rules { width: 100%; border-collapse: collapse; }
 h3 { font-family: var(--font-title); font-weight: 800; font-size: 24px; letter-spacing: .01em; }
+
+/* ---------- Tarjetas plegables (Ajustes) ---------- */
+.acc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.acc + .acc { margin-top: 10px; }
+.acc > summary { list-style: none; display: flex; align-items: center; gap: 14px; min-height: 78px; padding: 12px 14px; cursor: pointer; -webkit-user-select: none; user-select: none; }
+.acc > summary::-webkit-details-marker { display: none; }
+.acc > summary:focus-visible { outline: 3px solid #07429040; outline-offset: -3px; }
+.acc-icon { width: 46px; height: 46px; border-radius: 10px; background: var(--info-bg); color: var(--azul); display: grid; place-items: center; flex: none; }
+.acc-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.acc-title { font-family: var(--font-title); font-weight: 800; font-size: 23px; line-height: 1.05; letter-spacing: .01em; }
+.acc-sum { color: var(--ink-soft); font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+.acc-sum.warn { color: var(--soon); font-weight: 600; }
+.acc-badge { align-self: flex-start; margin-top: 3px; }
+.acc-badge:empty { display: none; }
+.acc-chev { color: var(--ink-mute); flex: none; display: grid; transition: transform .2s ease; }
+.acc[open] { border-color: var(--azul); }
+.acc[open] > summary { background: var(--bg); border-bottom: 1px solid var(--line); }
+.acc[open] > summary .acc-chev { transform: rotate(180deg); color: var(--azul); }
+.acc-body { padding: 16px 14px 18px; }
+/* Versión compacta, para tarjetas dentro de otra tarjeta */
+.acc.sub { box-shadow: none; border-radius: var(--radius-sm); }
+.acc.sub > summary { min-height: 66px; padding: 10px 12px; gap: 10px; }
+.acc.sub .acc-title { font-size: 20px; }
+.acc.sub .acc-sum { font-size: 14px; }
+.acc.sub .acc-body { padding: 14px 12px 16px; }
+.acc-body > .muted:first-child { margin-bottom: 12px; }
+.example { background: var(--info-bg); color: var(--azul); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 15px; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .acc-chev { transition: none; } }

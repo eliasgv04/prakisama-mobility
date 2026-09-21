@@ -69,7 +69,7 @@ En el panel: **Authentication**
 ### 2.4 Crear usuarios
 
 1. **Authentication → Users → Add user** (con "Auto confirm user") o **Invite user**. **El primer usuario que se cree es administrador**; los siguientes entran como *encargado*.
-2. Un admin puede cambiar roles y desactivar cuentas en la app: **Ajustes → Usuarios**.
+2. Un admin puede cambiar roles y desactivar cuentas en la app: **Ajustes → Usuarios y permisos**.
 3. Si invitas por email, al abrir el enlace la app pide fijar una contraseña.
 
 ## 3. Variables de entorno
@@ -133,7 +133,7 @@ Devuelve, por destinatario, qué avisos enviaría hoy. Con `&today=2026-10-01` s
 - **Un email-resumen por destinatario y día**, no uno por vehículo.
 - Antelaciones configurables (por defecto 30, 15 y 7 días antes y el mismo día) y **recordatorio semanal mientras siga vencido**.
 - Sin duplicados: cada aviso queda en `notifications_sent`. Si un día falla el envío o se da de alta un vehículo con poco margen, el aviso se manda igualmente una sola vez (no depende de acertar el día exacto).
-- Todo se configura en la app: **Ajustes → Avisos por email** (destinatarios, antelaciones, tipos de aviso).
+- Todo se configura en la app: **Ajustes → Avisos por email** (tarjetas *Quién recibe los avisos*, *Cuándo y de qué avisar* y *Kilómetros y horas*).
 
 ## 6. Calendario
 
@@ -174,7 +174,7 @@ La fecha de la próxima ITV sale de, por este orden de prioridad:
 2. **Última inspección registrada:** si fue favorable, la caducidad de la tarjeta (*Según tarjeta ITV*). Si fue desfavorable o negativa, se marca que hay que repetirla. Al registrar una ITV favorable se borra la fecha manual.
 3. **Calculada:** desde la fecha de primera matriculación y las reglas de la tabla `itv_rules` (*Calculada*). Si no hay ninguna ITV registrada se asume que las anteriores se pasaron a tiempo y se etiqueta como *estimada*.
 
-Las reglas de periodicidad son datos (editables en **Ajustes → Reglas de ITV**), no código:
+Las reglas de periodicidad son datos (editables en **Ajustes → Cada cuánto toca la ITV**), no código:
 
 | Tipo | Primera ITV | Después | Cambio de tramo |
 |---|---|---|---|
