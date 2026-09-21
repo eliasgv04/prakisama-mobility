@@ -13,7 +13,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { todayISO } from '../_shared/dates.js';
 import { buildFleetStatus } from '../_shared/fleet.js';
 import { buildCalendar, itemsToEventLines } from '../_shared/ics.js';
-import { fetchSnapshot } from '../_shared/snapshot.js';
+import { fetchSnapshotWithRetry } from '../_shared/snapshot.js';
 
 const plain = (message: string, status: number) =>
   new Response(message, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     if (!profile || !profile.active) return plain('Enlace no válido o revocado', 404);
 
     const today = todayISO();
-    const snapshot = await fetchSnapshot(supabase);
+    const snapshot = await fetchSnapshotWithRetry(supabase);
     const { items, settings } = buildFleetStatus(snapshot, today);
 
     const body = buildCalendar({

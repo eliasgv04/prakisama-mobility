@@ -14,7 +14,7 @@ import { addDays, isValidISO, todayISO } from '../_shared/dates.js';
 import { renderDigest } from '../_shared/digest.js';
 import { buildFleetStatus } from '../_shared/fleet.js';
 import { decideReminders } from '../_shared/reminders.js';
-import { fetchSnapshot } from '../_shared/snapshot.js';
+import { fetchSnapshotWithRetry } from '../_shared/snapshot.js';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body, null, 2), { status, headers: { 'Content-Type': 'application/json' } });
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    const snapshot = await fetchSnapshot(supabase);
+    const snapshot = await fetchSnapshotWithRetry(supabase);
     const { items, settings } = buildFleetStatus(snapshot, today);
 
     const recipients: string[] = [...new Set((settings.recipients as string[]).map((e) => e.trim().toLowerCase()).filter(Boolean))];

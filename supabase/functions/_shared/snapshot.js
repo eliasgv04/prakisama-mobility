@@ -28,3 +28,20 @@ export async function fetchSnapshot(client) {
     settings: settings.data ?? null,
   };
 }
+
+/**
+ * Como fetchSnapshot pero con reintentos, para las Edge Functions: justo tras arrancar un worker
+ * puede haber un desfase de reloj momentáneo ("JWT issued at future") que se pasa en segundos.
+ */
+export async function fetchSnapshotWithRetry(client, { attempts = 3, delayMs = 1500 } = {}) {
+  let lastError;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fetchSnapshot(client);
+    } catch (err) {
+      lastError = err;
+      if (i < attempts - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw lastError;
+}

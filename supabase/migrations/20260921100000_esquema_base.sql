@@ -395,3 +395,17 @@ create table public.notifications_sent (
   unique (item_key, due_ref, stage, recipient, sent_on)
 );
 create index notifications_sent_lookup_idx on public.notifications_sent (recipient, item_key, due_ref);
+
+-- ---------------------------------------------------------------------------
+-- Usuarios que ya existían antes de esta migración
+-- El trigger on_auth_user_created solo actúa con altas nuevas: aquí se crea el perfil de los que
+-- ya estuvieran en Auth (p. ej. el usuario creado a mano al montar el proyecto). El más antiguo
+-- queda como administrador. Es idempotente.
+-- ---------------------------------------------------------------------------
+insert into public.profiles (id, email, full_name, role)
+select u.id,
+       coalesce(u.email, ''),
+       u.raw_user_meta_data ->> 'full_name',
+       case when row_number() over (order by u.created_at) = 1 then 'admin' else 'encargado' end
+  from auth.users u
+on conflict (id) do nothing;
