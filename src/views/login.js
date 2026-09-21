@@ -1,7 +1,7 @@
 import { friendlyError } from '../lib/errors.js';
 import { sendMagicLink, sendPasswordReset, session, setPassword, signIn } from '../lib/session.js';
 import { navigate } from '../router.js';
-import { banner, button } from '../ui/components.js';
+import { banner, brandHeader, button } from '../ui/components.js';
 import { h, toast } from '../ui/dom.js';
 
 export default async function login() {
@@ -60,9 +60,7 @@ export default async function login() {
   const node = h(
     'div',
     { class: 'login' },
-    h('img', { class: 'logo', src: `${import.meta.env.BASE_URL}icons/icon-192.png`, alt: '' }),
-    h('h1', {}, 'Flota Prakisama'),
-    h('p', { class: 'muted' }, 'Vencimientos de ITV y mantenimiento'),
+    ...brandHeader('Prakisama Mobility', 'Vencimientos de ITV y mantenimiento de la flota.'),
     session.blocked ? banner(session.blocked, 'error') : null,
     form,
   );
@@ -98,5 +96,5 @@ export async function newPassword() {
     h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Repítela'), second),
     save,
   );
-  return { title: 'Crea tu contraseña', node: h('div', { class: 'login' }, form), bare: true };
+  return { title: 'Crea tu contraseña', node: h('div', { class: 'login' }, ...brandHeader('Crea tu contraseña'), form), bare: true };
 }

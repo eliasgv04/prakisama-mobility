@@ -1,4 +1,4 @@
-# Flota Prakisama
+# Prakisama Mobility
 
 App web instalable (PWA) para controlar la **ITV** y el **mantenimiento** de la flota de Prakisama, con avisos por email, calendario suscribible y historial por vehículo. Pensada para usarse desde el móvil.
 
@@ -79,7 +79,7 @@ En el panel: **Authentication**
 | `VITE_SUPABASE_URL` | `.env` y hosting | URL del proyecto |
 | `VITE_SUPABASE_ANON_KEY` | `.env` y hosting | Clave `anon` (pública; la seguridad la da RLS) |
 | `RESEND_API_KEY` | secretos de Edge Functions | Clave de Resend |
-| `RESEND_FROM` | secretos de Edge Functions | Remitente, p. ej. `Flota Prakisama <avisos@tudominio.com>` |
+| `RESEND_FROM` | secretos de Edge Functions | Remitente, p. ej. `Prakisama Mobility <avisos@tudominio.com>` |
 | `CRON_SECRET` | secretos de Edge Functions **y** Vault | Secreto compartido cron ↔ función |
 | `APP_URL` | secretos de Edge Functions | URL pública de la app (enlace en emails y calendario) |
 
@@ -105,7 +105,7 @@ npx supabase functions deploy calendar-feed
 
 1. Crea cuenta en [resend.com](https://resend.com) (plan gratuito: 100 emails/día, 3.000/mes; sobra para un resumen diario).
 2. **API Keys → Create** → cópiala en `RESEND_API_KEY`.
-3. **Domains → Add domain** y añade los registros DNS (SPF/DKIM) que te indique. Con el dominio verificado, usa `RESEND_FROM="Flota Prakisama <avisos@tudominio.com>"`.
+3. **Domains → Add domain** y añade los registros DNS (SPF/DKIM) que te indique. Con el dominio verificado, usa `RESEND_FROM="Prakisama Mobility <avisos@tudominio.com>"`.
    - *Solo para probar:* sin dominio verificado puedes usar `onboarding@resend.dev`, pero únicamente envía al email con el que te registraste en Resend.
 
 ### 5.2 Programar el envío diario (pg_cron)
@@ -202,6 +202,16 @@ Fechas: las de calendario se tratan como días (no instantes), con recorte de fi
 | "No tienes permiso" | Tu rol no puede hacerlo (ver tabla en [docs/seguridad-rls.md](docs/seguridad-rls.md)) |
 | Cambié algo y la app se ve vieja | Actualización del service worker: recarga; la app avisa cuando hay versión nueva |
 | El calendario no se actualiza | Los clientes refrescan cada varias horas (Google hasta 24 h) |
+
+## Identidad visual
+
+La app usa la identidad de [prakisama.com](https://prakisama.com): azul `#074290`, granate `#c62654`, tipografías **Big Shoulders Display** (titulares) y **Barlow** (texto), esquinas de 6 px en botones/campos y 14 px en tarjetas, y sombras suaves azuladas. Todo está en `src/styles.css` (variables `--azul`, `--rojo`, `--font-title`…).
+
+- **Logo:** `src/assets/logo-prakisama.png` (el de la web). Sale en la cabecera y en la pantalla de acceso.
+- **Fuentes:** alojadas en `src/assets/fonts/` (licencia OFL, ver `public/OFL-fuentes.txt`): funcionan offline y no llaman a Google.
+- **Iconos de la PWA** (`public/icons/*`, `public/favicon.svg`): casa granate con una "P" azul dibujada por `npm run icons` a partir de los colores de marca. Si la empresa prefiere otro icono, sustituye esos PNG (192, 512 y 512 *maskable*) y el SVG.
+- **Semáforo:** verde, ámbar y rojo propios (`--ok`, `--amber`, `--overdue`); el rojo de "vencido" es distinto del granate de marca para no confundirlo con un botón.
+- **Emails:** cabecera con el logo servido desde `prakisama.com/images/logo-prakisama.png`.
 
 ## Estructura
 

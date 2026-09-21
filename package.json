@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "PWA de mantenimiento de flota para Prakisama: ITV, mantenimientos, avisos y calendario.",
+  "description": "Prakisama Mobility: PWA de mantenimiento de flota (ITV, mantenimientos, avisos y calendario).",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

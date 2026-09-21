@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     const { items, settings } = buildFleetStatus(snapshot, today);
 
     const body = buildCalendar({
-      name: 'Flota Prakisama · Vencimientos',
+      name: 'Prakisama Mobility · Vencimientos',
       eventLines: itemsToEventLines(items, {
         today,
         leadDays: settings.lead_days,

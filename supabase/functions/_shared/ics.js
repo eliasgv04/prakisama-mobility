@@ -6,6 +6,7 @@
 // que toca en lugar de a medianoche.
 
 import { describeDue } from './fleet.js';
+import { displayPlate } from './plate.js';
 import { addDays, compareISO } from './dates.js';
 
 const CRLF = '\r\n';
@@ -118,8 +119,9 @@ export function itemsToEventLines(items, { today, leadDays = [30, 15, 7], notify
   return items
     .filter((item) => item.dueDate && compareISO(item.dueDate, addDays(today, -maxPastDays)) >= 0)
     .map((item) => {
-      const summary = `${item.title} · ${item.plate}`;
-      const description = [item.vehicleName ? `${item.plate} · ${item.vehicleName}` : item.plate, item.title, describeDue(item)]
+      const plate = displayPlate(item.plate);
+      const summary = `${item.title} · ${plate}`;
+      const description = [item.vehicleName ? `${plate} · ${item.vehicleName}` : plate, item.title, describeDue(item)]
         .filter(Boolean)
         .join('\n');
       return buildEvent({

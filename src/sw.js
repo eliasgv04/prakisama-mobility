@@ -1,4 +1,4 @@
-// Service worker de Flota Prakisama (lo procesa scripts/vite-plugin-sw.mjs al hacer el build).
+// Service worker de Prakisama Mobility (lo procesa scripts/vite-plugin-sw.mjs al hacer el build).
 //
 // Qué hace:
 //  - Precachea la app shell (HTML, JS, CSS, iconos) para que la app abra sin conexión.

@@ -1,5 +1,6 @@
 // Estructura común de pantalla: barra superior, contenido y barra de pestañas inferior.
 
+import logoUrl from '../assets/logo-prakisama.png';
 import { session } from '../lib/session.js';
 import { navigate } from '../router.js';
 import { fmtDateTime } from '../lib/format.js';
@@ -14,14 +15,15 @@ const TABS = [
 ];
 
 /**
- * Una "vista" es { title, node, back?, actions?, tab?, offline?, cachedAt?, bare? }.
- * `back` es la ruta a la que vuelve la flecha; `bare` oculta barras (pantalla de acceso).
+ * Una "vista" es { title, node, back?, actions?, tab?, offline?, cachedAt?, bare?, hideTitle? }.
+ * `back` es la ruta a la que vuelve la flecha; `bare` oculta barras (pantalla de acceso);
+ * `hideTitle` no pinta el titular grande (la ficha del vehículo ya muestra la matrícula).
  */
 export function createShell(root) {
-  const titleEl = h('h1');
   const backSlot = h('div');
   const actionsSlot = h('div', { style: 'display:flex' });
-  const topbar = h('header', { class: 'topbar' }, backSlot, titleEl, actionsSlot);
+  const brand = h('a', { class: 'brand', href: '#/', 'aria-label': 'Prakisama Mobility: ir al panel' }, h('img', { src: logoUrl, alt: 'Prakisama, S.L. Construcciones', width: 100, height: 36 }));
+  const topbar = h('header', { class: 'topbar' }, backSlot, brand, actionsSlot);
   const main = h('main', { class: 'main', id: 'main' });
   const tabbar = h('nav', { class: 'tabbar', 'aria-label': 'Navegación principal' });
   const shell = h('div', { class: 'shell' }, topbar, main, tabbar);
@@ -53,8 +55,7 @@ export function createShell(root) {
       topbar.hidden = bare;
       tabbar.hidden = bare;
 
-      titleEl.textContent = view.title ?? 'Flota Prakisama';
-      document.title = view.title ? `${view.title} · Flota Prakisama` : 'Flota Prakisama';
+      document.title = view.title ? `${view.title} · Prakisama Mobility` : 'Prakisama Mobility';
       clear(backSlot);
       if (view.back) backSlot.append(iconButton('back', 'Volver', () => navigate(view.back)));
       clear(actionsSlot);
@@ -62,6 +63,7 @@ export function createShell(root) {
       renderTabs(view.tab);
 
       clear(main);
+      if (view.title && !bare && !view.hideTitle) main.append(h('h1', { class: 'page-title' }, view.title));
       if (view.offline) {
         const when = view.cachedAt ? ` Datos de ${fmtDateTime(view.cachedAt)}.` : '';
         main.append(banner(`Sin conexión: modo solo lectura.${when}`, 'warn'));

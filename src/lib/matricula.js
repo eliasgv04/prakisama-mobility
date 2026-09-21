@@ -37,8 +37,5 @@ export function validateMatricula(input) {
   };
 }
 
-/** Para mostrar: 1234BCD → "1234 BCD". Otros formatos se muestran tal cual. */
-export function displayPlate(plate) {
-  const p = normalizeMatricula(plate);
-  return /^\d{4}[A-Z]{3}$/.test(p) ? `${p.slice(0, 4)} ${p.slice(4)}` : p;
-}
+// Formato para mostrar ("1234 BCD"): compartido con los emails y el calendario.
+export { displayPlate } from '@shared/plate.js';

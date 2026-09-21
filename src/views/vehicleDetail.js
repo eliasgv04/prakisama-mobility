@@ -41,7 +41,7 @@ export default async function vehicleDetail({ params }) {
     node.append(h('div', { class: 'spacer' }), button('Editar vehículo', { variant: 'ghost', block: true, iconName: 'edit', onClick: () => navigate(`/vehiculos/${vehicle.id}/editar`) }));
   }
 
-  return { title: displayPlate(vehicle.plate), back: '/vehiculos', tab: 'vehiculos', node, offline: fleet.offline, cachedAt: fleet.cachedAt };
+  return { title: displayPlate(vehicle.plate), hideTitle: true, back: '/vehiculos', tab: 'vehiculos', node, offline: fleet.offline, cachedAt: fleet.cachedAt };
 }
 
 // ---------------------------------------------------------------------------

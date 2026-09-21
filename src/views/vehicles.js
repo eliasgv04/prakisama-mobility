@@ -69,7 +69,7 @@ export default async function vehiclesList() {
     },
   });
 
-  const node = h('div', { class: 'stack' }, search);
+  const node = h('div', { class: `stack${admin && !offline ? ' has-fab' : ''}` }, search);
   if (all.some((e) => !e.vehicle.active)) {
     node.append(
       h(

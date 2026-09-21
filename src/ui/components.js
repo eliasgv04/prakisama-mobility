@@ -1,6 +1,7 @@
 // Componentes de interfaz reutilizables (funciones que devuelven nodos DOM).
 
 import { STATUS_LABELS } from '@shared/constants.js';
+import logoUrl from '../assets/logo-prakisama.png';
 import { h } from './dom.js';
 
 // ---------- Iconos (SVG en línea, trazo) ----------
@@ -107,6 +108,14 @@ export function segmented(name, options, value) {
     ),
   );
 }
+
+/** Logo grande + nombre de la app, para las pantallas sin barras (acceso). */
+export const brandHeader = (title, lead) => [
+  h('img', { class: 'logo', src: logoUrl, alt: 'Prakisama, S.L. Construcciones', width: 300, height: 108 }),
+  h('div', { class: 'eyebrow' }, 'Gestión de flota y maquinaria'),
+  h('h1', {}, title),
+  lead ? h('p', { class: 'lead' }, lead) : null,
+];
 
 export const section = (title, ...content) => h('section', { class: 'section' }, h('div', { class: 'section-title' }, title), ...content);
 

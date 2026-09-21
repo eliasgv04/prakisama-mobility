@@ -1,4 +1,4 @@
-# CLAUDE.md — Flota Prakisama
+# CLAUDE.md — Prakisama Mobility
 
 App web instalable (PWA) para Prakisama, empresa de construcción: avisa de vencimientos de ITV y mantenimientos y guarda el historial de cada vehículo. La usan personas no técnicas, casi siempre desde el móvil. **Interfaz en español, simple y rápida.**
 
@@ -44,6 +44,10 @@ El alias `@shared` de Vite apunta a `supabase/functions/_shared`. **Toda la lóg
 - Ningún secreto en el frontend: solo la anon key (`.env`, fuera de git; hay `.env.example`). Resend, `CRON_SECRET` y la service role van como secretos de las Edge Functions (`supabase/.env`, fuera de git).
 - Sin dependencias innecesarias. Runtime del frontend: solo `@supabase/supabase-js`.
 - Nunca `innerHTML` con datos de usuario: usar `h()` (crea nodos de texto).
+
+## Identidad visual (Prakisama Mobility)
+
+Nombre de la app: **Prakisama Mobility** (nombre corto en el móvil: "Mobility"). Estética copiada de prakisama.com (Astro): cabecera blanca con logo a la izquierda, titulares en Big Shoulders Display, etiquetas granate en mayúsculas con rayita, botones de 6 px, tarjetas de 14 px con sombra azulada. Tokens en `src/styles.css`: `--azul #074290`, `--rojo #c62654`, fondo `#f7f8fa`, texto `#15212e`. Botón primario en **azul** (el granate se reserva para acentos: etiquetas, pestaña activa, botón "+") y semáforo con rojo propio, para que "vencido" no se confunda con un botón. Fuentes alojadas en `src/assets/fonts` (no usar Google Fonts). Logo en `src/assets/logo-prakisama.png`. El texto visible "Flota Prakisama" ya no se usa.
 
 ## Decisiones tomadas (por defecto, revisables)
 

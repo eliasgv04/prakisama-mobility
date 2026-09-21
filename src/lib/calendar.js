@@ -20,7 +20,7 @@ export function downloadItemIcs(item, settings) {
     notifyOnDueDay: settings.notify_on_due_day,
     maxPastDays: 36500,
   });
-  const text = buildCalendar({ name: 'Flota Prakisama', eventLines });
+  const text = buildCalendar({ name: 'Prakisama Mobility', eventLines });
   const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
   const link = document.createElement('a');
   link.href = url;
