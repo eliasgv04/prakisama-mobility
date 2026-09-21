@@ -61,9 +61,11 @@ El alias `@shared` de Vite apunta a `supabase/functions/_shared`. **Toda la lóg
 
 - [x] Fase 1 — proyecto, esquema, Auth, RLS, CRUD de vehículos con foto, cálculo de ITV
 - [x] Fase 2 — mantenimiento, averías, reglas, panel con semáforo
-- [x] Fase 3 — emails programados y feed .ics
-- [x] Fase 4 — PWA, pulido, README, despliegue
-- Pendiente / futuro: notificaciones push (en iOS solo con la app instalada en pantalla de inicio), servicio real para `lookupMatricula`, verificar las reglas de ITV con el RD 920/2017.
+- [x] Fase 3 — emails programados y feed .ics (código escrito; falta desplegar y probar con Resend real)
+- [x] Fase 4 — PWA, README y documentación
+- [ ] **Pendiente**: aplicar las migraciones en el proyecto Supabase real, crear el primer admin, desplegar las Edge Functions, programar el cron y desplegar el frontend (ver README).
+- La interfaz se ha recorrido en un navegador headless contra un servidor de pruebas local (login, panel, altas, registros, ITV, reglas, ajustes, offline), pero **el SQL, la RLS y las Edge Functions aún no se han ejecutado contra Supabase real**. Primera prueba real: migraciones → login → alta de un vehículo → `send-reminders?dry_run=1`.
+- Futuro: notificaciones push (en iOS solo con la app instalada en pantalla de inicio), servicio real para `lookupMatricula`, verificar las reglas de ITV con el RD 920/2017.
 
 ---
 
