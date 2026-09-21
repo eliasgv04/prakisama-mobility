@@ -74,10 +74,10 @@ Nombre de la app: **Prakisama Mobility** (nombre corto en el móvil: "Mobility")
 
 - [x] Migraciones 1-5 aplicadas (`supabase db push`). RLS activo en las 9 tablas; buckets `vehicle-photos` y `attachments` privados.
 - [x] Auth: registro público desactivado; `site_url` = `http://localhost:5173` (**cambiar a la URL de producción al desplegar**, y el secreto `APP_URL`).
-- [x] Edge Functions `send-reminders` y `calendar-feed` desplegadas (`--use-api --no-verify-jwt`). Secretos puestos: `CRON_SECRET`, `APP_URL`. **Faltan `RESEND_API_KEY` y `RESEND_FROM`** (sin ellos `send-reminders` no envía; `dry_run` sí funciona).
+- [x] Edge Functions `send-reminders` y `calendar-feed` desplegadas (`--use-api --no-verify-jwt`). Secretos puestos: `CRON_SECRET`, `APP_URL`, `RESEND_API_KEY` y `RESEND_FROM` (= `Prakisama Mobility <onboarding@resend.dev>`). **Limitación**: la cuenta de Resend no tiene ningún dominio verificado, así que solo se puede enviar a `eliasgonzalezvaldepenas@gmail.com` (el email de la cuenta de Resend, compartida con otro proyecto, FutsalKit). Envío real probado de punta a punta (función → Resend → `delivered`, sin duplicados en la 2.ª ejecución). Para enviar a más gente: verificar un dominio en Resend (añadir sus registros DNS), cambiar `RESEND_FROM` en `supabase/.env` y volver a subir los secretos con `supabase secrets set --env-file supabase/.env`.
 - [x] Cron `flota-enviar-avisos` programado a las 06:00 UTC (URL y secreto en Vault). Verificada la cadena cron → pg_net → función.
 - [x] Verificado contra el proyecto real con usuarios de prueba (ya borrados): 38 comprobaciones de RLS como anónimo/encargado, 14 como admin (triggers de ITV, restricciones, tramos de aviso d30/d15/d7/d0/overdue), y 21 + 11 flujos de interfaz como admin y encargado (subida de fotos y adjuntos a Storage incluida).
-- [ ] Pendiente: destinatarios de avisos (Ajustes), Resend, desplegar el frontend (Cloudflare Pages) y crear más usuarios.
+- [ ] Pendiente: verificar un dominio en Resend (para enviar a más de una persona), poner los destinatarios en Ajustes, desplegar el frontend (Cloudflare Pages) y crear más usuarios.
 
 Notas de operación: aplicar migraciones con `SUPABASE_ACCESS_TOKEN=… npx supabase db push --linked`; redesplegar una función con `npx supabase functions deploy <nombre> --use-api --no-verify-jwt`. `.env` y `supabase/.env` (gitignorados) contienen la anon key y el `CRON_SECRET`.
 
