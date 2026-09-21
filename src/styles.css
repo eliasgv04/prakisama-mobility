@@ -24,7 +24,7 @@
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--topbar-h) + 16px); scroll-padding-bottom: calc(var(--tabbar-h) + 24px); }
 body {
   margin: 0;
   background: var(--bg);

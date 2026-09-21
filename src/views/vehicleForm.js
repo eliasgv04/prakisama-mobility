@@ -15,10 +15,10 @@ const TYPE_OPTIONS = Object.entries(VEHICLE_TYPES).map(([value, { label }]) => [
 
 export default async function vehicleForm({ params }) {
   const editing = Boolean(params.id);
+  const fleet = await loadFleet();
+  if (fleet.offline) throw new Error('Necesitas conexión para guardar vehículos.');
   let vehicle = null;
   if (editing) {
-    const fleet = await loadFleet();
-    if (fleet.offline) throw new Error('Necesitas conexión para editar un vehículo.');
     vehicle = fleet.status.byVehicle.get(params.id)?.vehicle;
     if (!vehicle) throw new Error('Vehículo no encontrado.');
   }

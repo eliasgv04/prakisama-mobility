@@ -11,5 +11,8 @@ export const configured = Boolean(url && anonKey);
 export const supabase = configured
   ? createClient(url, anonKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+      // Las llamadas a la API nunca deben salir de la caché HTTP del navegador: si no, tras guardar
+      // algo la pantalla podía mostrar la lista antigua. (La caché offline es la de offline.js.)
+      global: { fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }) },
     })
   : null;

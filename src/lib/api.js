@@ -3,6 +3,7 @@
 
 import { fetchSnapshot } from '@shared/snapshot.js';
 import { isNetworkError } from './errors.js';
+import { withTimeout } from './net.js';
 import { readSnapshot, saveSnapshot } from './offline.js';
 import { SUPABASE_URL, supabase } from './supabase.js';
 
@@ -15,10 +16,13 @@ const orThrow = ({ data, error }) => {
 // Instantánea de la flota (vehículos + reglas + inspecciones + último mantenimiento + ajustes)
 // ---------------------------------------------------------------------------
 
+const SNAPSHOT_TIMEOUT_MS = 8000;
 let memo = null;
+let generation = 0;
 /** Descarta la caché en memoria; llamar tras cualquier escritura. */
 export const invalidate = () => {
   memo = null;
+  generation++; // una carga que estuviera en curso no debe volver a guardar datos ya antiguos
 };
 
 /**
@@ -27,17 +31,20 @@ export const invalidate = () => {
  */
 export async function getSnapshot({ force = false } = {}) {
   if (!force && memo && Date.now() - memo.at < 15_000) return memo.value;
+  const startedAt = generation;
+  const cached = readSnapshot();
+  // Sin red conocida y con datos guardados: no se espera a que fallen las peticiones.
+  if (!navigator.onLine && cached) return { snapshot: cached.snapshot, offline: true, cachedAt: cached.savedAt };
   try {
-    const snapshot = await fetchSnapshot(supabase);
+    // Con datos guardados no compensa esperar eternamente a una red que no responde.
+    const loading = fetchSnapshot(supabase);
+    const snapshot = cached ? await withTimeout(loading, SNAPSHOT_TIMEOUT_MS) : await loading;
     saveSnapshot(snapshot);
     const value = { snapshot, offline: false, cachedAt: null };
-    memo = { at: Date.now(), value };
+    if (startedAt === generation) memo = { at: Date.now(), value };
     return value;
   } catch (err) {
-    if (isNetworkError(err)) {
-      const cached = readSnapshot();
-      if (cached) return { snapshot: cached.snapshot, offline: true, cachedAt: cached.savedAt };
-    }
+    if (isNetworkError(err) && cached) return { snapshot: cached.snapshot, offline: true, cachedAt: cached.savedAt };
     throw err;
   }
 }

@@ -29,7 +29,7 @@ export default async function vehicleDetail({ params }) {
   node.append(heroCard(vehicle, entry, fleet));
   node.append(itvCard({ vehicle, entry, itv, settings, admin, online }));
   node.append(usageCard({ vehicle, entry, settings, online }));
-  node.append(rulesCard({ vehicle, rules, entry, settings, admin }));
+  node.append(rulesCard({ vehicle, rules, entry, settings, admin: admin && online }));
 
   // El historial se carga aparte para que la ficha aparezca al instante.
   const historyHost = h('div', {});

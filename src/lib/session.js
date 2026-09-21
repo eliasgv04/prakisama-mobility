@@ -1,6 +1,7 @@
 // Sesión, perfil y rol del usuario actual.
 
 import { friendlyError, isNetworkError } from './errors.js';
+import { withTimeout } from './net.js';
 import { clearOffline, readProfile, saveProfile } from './offline.js';
 import { supabase } from './supabase.js';
 
@@ -27,9 +28,14 @@ export const isAdmin = () => session.profile?.role === 'admin';
 export const roleLabel = (role) => (role === 'admin' ? 'Administrador' : 'Encargado');
 
 async function fetchProfile(userId) {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-  if (error) throw error;
-  return data;
+  const cached = readProfile();
+  // Sin red conocida y con perfil guardado: se abre al instante en modo offline.
+  if (!navigator.onLine && cached?.id === userId) throw new Error('Failed to fetch (sin conexión)');
+  const request = supabase.from('profiles').select('*').eq('id', userId).maybeSingle().then(({ data, error }) => {
+    if (error) throw error;
+    return data;
+  });
+  return cached?.id === userId ? withTimeout(request, 6000) : request;
 }
 
 /** Aplica un usuario autenticado: carga su perfil y bloquea cuentas sin perfil o desactivadas. */
@@ -59,12 +65,19 @@ export async function initSession() {
   // supabase-js consume y borra el hash del enlace de invitación/recuperación: anotamos el tipo antes.
   const linkType = new URLSearchParams(location.hash.replace(/^#/, '')).get('type');
 
-  const { data } = await supabase.auth.getSession();
+  // Con el token caducado, getSession intenta renovarlo y, sin red, reintenta durante bastante rato.
+  let data = null;
+  let unreachable = !navigator.onLine;
+  try {
+    ({ data } = await withTimeout(supabase.auth.getSession(), 8000));
+  } catch {
+    unreachable = true;
+  }
   if (data?.session) {
     await applyUser(data.session.user);
     session.needsPassword = Boolean(session.user) && (linkType === 'invite' || linkType === 'recovery');
-  } else if (!navigator.onLine) {
-    // Sin conexión y sin sesión en memoria: usamos el perfil guardado para poder consultar lo último.
+  } else if (unreachable) {
+    // Sin conexión y sin sesión utilizable: usamos el perfil guardado para poder consultar lo último.
     const cached = readProfile();
     if (cached) Object.assign(session, { user: { id: cached.id, email: cached.email }, profile: cached, offline: true });
   }

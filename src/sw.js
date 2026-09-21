@@ -45,6 +45,9 @@ async function navigate(request) {
   }
 }
 
+// Solo estáticos de la app. Las peticiones fetch()/XHR (destination "") van siempre a la red.
+const STATIC_DESTINATIONS = new Set(['script', 'style', 'image', 'font', 'manifest', 'worker']);
+
 async function staticAsset(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
@@ -60,5 +63,6 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
   if (new URL(request.url).origin !== self.location.origin) return; // Supabase y demás: red directa
-  event.respondWith(request.mode === 'navigate' ? navigate(request) : staticAsset(request));
+  if (request.mode === 'navigate') event.respondWith(navigate(request));
+  else if (STATIC_DESTINATIONS.has(request.destination)) event.respondWith(staticAsset(request));
 });
