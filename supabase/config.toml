@@ -1,0 +1,24 @@
+# Configuración mínima del CLI de Supabase (https://supabase.com/docs/guides/local-development/cli/config).
+# El resto de opciones toma los valores por defecto del CLI.
+project_id = "prakisama-flota"
+
+[api]
+enabled = true
+
+[db]
+major_version = 17
+
+[auth]
+# Solo acceso por invitación: los usuarios los crea un admin desde el panel de Supabase
+# (Authentication → Users → Invite/Add user). Así nadie puede registrarse por su cuenta.
+# En producción este ajuste se cambia en el Dashboard: Authentication → Sign In / Providers.
+enable_signup = false
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+
+# El feed de calendario y el cron no llevan JWT de usuario: se protegen con su propio secreto/token.
+[functions.calendar-feed]
+verify_jwt = false
+
+[functions.send-reminders]
+verify_jwt = false
