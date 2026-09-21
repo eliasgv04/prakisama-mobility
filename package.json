@@ -1,0 +1,19 @@
+{
+  "name": "prakisama-flota",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PWA de mantenimiento de flota para Prakisama: ITV, mantenimientos, avisos y calendario.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "icons": "node scripts/generate-icons.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.0"
+  }
+}
