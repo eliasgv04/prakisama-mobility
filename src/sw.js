@@ -1,0 +1,64 @@
+// Service worker de Flota Prakisama (lo procesa scripts/vite-plugin-sw.mjs al hacer el build).
+//
+// Qué hace:
+//  - Precachea la app shell (HTML, JS, CSS, iconos) para que la app abra sin conexión.
+//  - Navegaciones: red primero (con tiempo máximo) y, si falla, la app shell en caché.
+//  - Estáticos del mismo origen: caché primero.
+//  - Peticiones a Supabase (otro origen): SIEMPRE a la red. No se cachean datos ni fotos aquí;
+//    el modo offline de solo lectura de la lista de vehículos lo resuelve la propia app
+//    guardando la última consulta (src/lib/offline.js), que además se borra al cerrar sesión.
+
+const VERSION = '__VERSION__';
+const PRECACHE = __PRECACHE__;
+const CACHE = `flota-${VERSION}`;
+const NAVIGATION_TIMEOUT_MS = 3500;
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => cache.addAll(['./', ...PRECACHE]))
+      .then(() => self.skipWaiting()),
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith('flota-') && key !== CACHE).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
+  );
+});
+
+async function navigate(request) {
+  const cache = await caches.open(CACHE);
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), NAVIGATION_TIMEOUT_MS);
+    const response = await fetch(request, { signal: controller.signal });
+    clearTimeout(timer);
+    if (response.ok) cache.put('index.html', response.clone());
+    return response;
+  } catch {
+    return (await cache.match('index.html')) || (await cache.match('./')) || Response.error();
+  }
+}
+
+async function staticAsset(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) {
+    const cache = await caches.open(CACHE);
+    cache.put(request, response.clone());
+  }
+  return response;
+}
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+  if (new URL(request.url).origin !== self.location.origin) return; // Supabase y demás: red directa
+  event.respondWith(request.mode === 'navigate' ? navigate(request) : staticAsset(request));
+});
