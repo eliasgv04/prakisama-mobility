@@ -198,6 +198,12 @@ Cosas a tener en cuenta:
 - Una ITV pasada en los 30 días anteriores a la caducidad no pierde tiempo: la nueva validez se suma a la fecha de caducidad anterior (art. 6.5). Como la app usa la caducidad de la tarjeta, ya lo refleja.
 - **Reforma europea en trámite**: la Comisión propuso en abril de 2025 revisar el paquete de ITV (Consejo y Parlamento aún negocian). Si llega a España, basta con editar los tramos en Ajustes.
 
+### Seguro y financiación
+
+El **seguro** funciona igual que la ITV: la fecha de vencimiento se pone a mano por vehículo (sin tabla de reglas, no hay nada que calcular) y desde ahí entra en el semáforo del panel, el email diario y el feed .ics, con las mismas antelaciones. Se puede desactivar en **Ajustes → Cuándo y de qué avisar** (`notify_insurance`). Tipo de seguro y aseguradora son texto libre, solo para consulta.
+
+La **financiación** (préstamo o leasing) es solo informativa: entidad y fecha de fin se ven en la ficha del vehículo, pero no generan avisos ni cuentan para el semáforo.
+
 ### Mantenimiento
 
 Por vehículo se definen reglas ("aceite cada 15.000 km o 12 meses, lo que ocurra antes"). El siguiente vencimiento se calcula desde el último registro de ese tipo (o desde la referencia inicial de la regla). Al guardar un cambio de aceite, la app te dice cuándo toca el siguiente. Los avisos por km/horas dependen de que alguien mantenga el contador al día: por eso la ficha muestra la fecha de la última actualización y el panel avisa de los km desfasados.

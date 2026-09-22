@@ -1,6 +1,6 @@
 // Alta y edición de vehículos. Baja lógica: nunca se borra.
 
-import { VEHICLE_TYPES, usageUnitFor } from '@shared/constants.js';
+import { FINANCING_TYPES, VEHICLE_TYPES, usageUnitFor } from '@shared/constants.js';
 import { saveVehicle, setVehicleActive, signedUrls } from '../lib/api.js';
 import { loadFleet } from '../lib/fleet.js';
 import { friendlyError } from '../lib/errors.js';
@@ -12,6 +12,7 @@ import { areaField, button, checkField, icon, readForm, selectField, textField, 
 import { confirmDialog, h, toast } from '../ui/dom.js';
 
 const TYPE_OPTIONS = Object.entries(VEHICLE_TYPES).map(([value, { label }]) => [value, label]);
+const FINANCING_OPTIONS = [['', 'Ninguna'], ...Object.entries(FINANCING_TYPES)];
 
 export default async function vehicleForm({ params }) {
   const editing = Boolean(params.id);
@@ -117,6 +118,25 @@ export default async function vehicleForm({ params }) {
     hint: 'Masa máxima autorizada. Más de 3.500 kg = camión.',
   });
 
+  // --- Seguro: como la ITV, entra en el semáforo y los avisos si tiene fecha de vencimiento ---
+  const insuranceType = textField('Tipo de seguro (opcional)', 'insurance_type', { value: v.insurance_type ?? '', placeholder: 'Ej.: Todo riesgo' });
+  const insurer = textField('Aseguradora (opcional)', 'insurer', { value: v.insurer ?? '' });
+  const insuranceExpiry = textField('Vencimiento del seguro (opcional)', 'insurance_expiry', { type: 'date', value: v.insurance_expiry ?? '' });
+
+  // --- Financiación: solo informativa, no genera avisos ---
+  const financingLender = textField('Entidad financiera', 'financing_lender', { value: v.financing_lender ?? '' });
+  const financingEndDate = textField('Fecha de fin', 'financing_end_date', { type: 'date', value: v.financing_end_date ?? '' });
+  const updateFinancingFields = (type) => {
+    const show = type === 'prestamo' || type === 'leasing';
+    financingLender.hidden = !show;
+    financingEndDate.hidden = !show;
+  };
+  const financingType = selectField('Financiación (opcional)', 'financing_type', FINANCING_OPTIONS, {
+    value: v.financing_type ?? '',
+    onChange: (event) => updateFinancingFields(event.target.value),
+  });
+  updateFinancingFields(v.financing_type ?? '');
+
   const save = button('Guardar', { type: 'submit', block: true, iconName: 'check' });
   const form = h(
     'form',
@@ -139,6 +159,12 @@ export default async function vehicleForm({ params }) {
           usage_unit: usageUnitFor(f.vehicle_type),
           notes: f.notes,
           itv_enabled: f.itv_enabled,
+          insurance_type: f.insurance_type,
+          insurer: f.insurer,
+          insurance_expiry: f.insurance_expiry,
+          financing_type: f.financing_type,
+          financing_lender: f.financing_lender,
+          financing_end_date: f.financing_end_date,
         };
         save.disabled = true;
         try {
@@ -167,6 +193,14 @@ export default async function vehicleForm({ params }) {
     h('label', { class: 'field' }, usageLabel, usageInput),
     checkField('Controlar la ITV de este vehículo', 'itv_enabled', v.itv_enabled),
     machineryHint,
+    h('div', { class: 'field-label', style: 'margin-top:4px' }, 'Seguro'),
+    insuranceType,
+    insurer,
+    insuranceExpiry,
+    h('div', { class: 'field-label', style: 'margin-top:4px' }, 'Financiación'),
+    financingType,
+    financingLender,
+    financingEndDate,
     areaField('Notas', 'notes', { value: v.notes ?? '' }),
     save,
   );

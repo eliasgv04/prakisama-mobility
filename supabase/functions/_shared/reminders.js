@@ -42,6 +42,7 @@ export function decideReminders({ items, settings, sentRows, today }) {
   const due = [];
   for (const item of items) {
     if (item.type === 'itv' && !settings.notify_itv) continue;
+    if (item.type === 'insurance' && !settings.notify_insurance) continue;
     if (item.type === 'maintenance' && !(item.trigger === 'date' ? settings.notify_maintenance : settings.notify_usage)) continue;
 
     const dueRef = dueRefOf(item);

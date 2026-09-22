@@ -1,6 +1,6 @@
 // Ficha del vehículo: ITV, kilómetros, mantenimiento periódico e historial.
 
-import { ITV_RESULTS, MAINTENANCE_KINDS, VEHICLE_TYPES } from '@shared/constants.js';
+import { FINANCING_TYPES, ITV_RESULTS, MAINTENANCE_KINDS, VEHICLE_TYPES } from '@shared/constants.js';
 import { diffDays, todayISO } from '@shared/dates.js';
 import { describeDue } from '@shared/fleet.js';
 import { deleteInspection, deleteMaintenanceRecord, getHistory, setItvManualDate, signedUrls } from '../lib/api.js';
@@ -28,7 +28,10 @@ export default async function vehicleDetail({ params }) {
   const left = h('div', { class: 'col' });
   const right = h('div', { class: 'col' });
   const node = h('div', { class: 'detail-grid' }, left, right);
-  left.append(heroCard(vehicle, entry, fleet), itvCard({ vehicle, entry, itv, settings, online }), usageCard({ vehicle, entry, settings, online }));
+  const insurance = insuranceCard({ vehicle, entry, settings });
+  left.append(heroCard(vehicle, entry, fleet), itvCard({ vehicle, entry, itv, settings, online }));
+  if (insurance) left.append(insurance);
+  left.append(usageCard({ vehicle, entry, settings, online }));
   right.append(rulesCard({ vehicle, rules, entry, settings, canEdit: online }));
 
   // El historial se carga aparte para que la ficha aparezca al instante.
@@ -54,10 +57,14 @@ function heroCard(vehicle, entry) {
     });
   }
   const name = [vehicle.alias, [vehicle.brand, vehicle.model].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
+  const financing = vehicle.financing_type
+    ? [FINANCING_TYPES[vehicle.financing_type], vehicle.financing_lender, vehicle.financing_end_date ? `hasta ${fmtDate(vehicle.financing_end_date)}` : null].filter(Boolean).join(' · ')
+    : null;
   const rows = [
     ['Tipo', VEHICLE_TYPES[vehicle.vehicle_type]?.label],
     ['Matriculación', vehicle.first_registration_date ? fmtDate(vehicle.first_registration_date) : null],
     ['MMA', vehicle.gvw_kg ? `${vehicle.gvw_kg.toLocaleString('es-ES')} kg` : null],
+    ['Financiación', financing],
   ].filter(([, value]) => value);
 
   return h(
@@ -141,6 +148,25 @@ function openManualDateSheet(vehicle) {
       vehicle.itv_manual_date ? button('Volver al cálculo automático', { variant: 'ghost', block: true, onClick: () => run(null) }) : null,
     );
   });
+}
+
+/** Solo se muestra si hay algo de seguro guardado; se edita desde "Editar vehículo". */
+function insuranceCard({ vehicle, entry, settings }) {
+  if (!vehicle.insurance_type && !vehicle.insurer && !vehicle.insurance_expiry) return null;
+  const item = entry.items.find((i) => i.type === 'insurance');
+  const card = h('div', { class: 'card' });
+  const rows = [['Tipo', vehicle.insurance_type], ['Aseguradora', vehicle.insurer]].filter(([, value]) => value);
+  if (rows.length) card.append(h('dl', { class: 'kv' }, rows.flatMap(([k, val]) => [h('dt', {}, k), h('dd', {}, val)])));
+  if (item) {
+    card.append(
+      h('div', { style: `display:flex;justify-content:space-between;align-items:center;gap:8px${rows.length ? ';margin-top:12px' : ''}` }, h('div', { class: 'big' }, fmtDate(item.dueDate)), statusChip(item.status)),
+      h('p', { class: 'muted', style: 'margin-top:4px' }, describeDue(item)),
+      h('div', { class: 'btn-row', style: 'margin-top:12px' }, button('Añadir al calendario', { small: true, variant: 'ghost', iconName: 'calendar', onClick: () => downloadItemIcs(item, settings) })),
+    );
+  } else {
+    card.append(h('p', { class: 'muted', style: 'margin-top:8px' }, 'Sin fecha de vencimiento: edita el vehículo para añadirla y que entre en los avisos.'));
+  }
+  return section('Seguro', card);
 }
 
 function usageCard({ vehicle, entry, settings, online }) {

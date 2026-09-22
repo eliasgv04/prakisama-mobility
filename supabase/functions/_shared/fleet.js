@@ -78,6 +78,23 @@ export function buildFleetStatus(snapshot, today, opts = {}) {
       });
     }
 
+    // --- Seguro: sin cálculo, la fecha la pone la persona a mano ---
+    if (vehicle.insurance_expiry) {
+      const daysRemaining = diffDays(today, vehicle.insurance_expiry);
+      vehicleItems.push({
+        ...base,
+        id: `insurance:${vehicle.id}`,
+        type: 'insurance',
+        title: 'Seguro',
+        status: statusFromDays(daysRemaining, maxLead),
+        trigger: 'date',
+        dueDate: vehicle.insurance_expiry,
+        daysRemaining,
+        dueUsage: null,
+        usageRemaining: null,
+      });
+    }
+
     // --- Mantenimiento periódico ---
     const usageUpdatedOn = vehicle.usage_updated_at ? isoDateOf(vehicle.usage_updated_at, opts.tz) : null;
     const ruleViews = [];

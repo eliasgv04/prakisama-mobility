@@ -25,6 +25,9 @@ export const MAINTENANCE_KINDS = {
 /** Tipos que admiten regla periódica (una avería no es periódica). */
 export const RULE_KINDS = ['aceite', 'revision', 'neumaticos', 'otro'];
 
+/** Financiación del vehículo (solo informativa, no genera avisos). */
+export const FINANCING_TYPES = { prestamo: 'Préstamo', leasing: 'Leasing' };
+
 export const ITV_RESULTS = {
   favorable: 'Favorable',
   desfavorable: 'Desfavorable',
@@ -43,6 +46,7 @@ export const DEFAULT_SETTINGS = {
   notify_on_due_day: true,
   weekly_overdue: true,
   notify_itv: true,
+  notify_insurance: true,
   notify_maintenance: true,
   notify_usage: true,
   default_warn_usage: 500,

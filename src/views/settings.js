@@ -60,7 +60,7 @@ function whenSummary(cfg) {
   const parts = [lead.length ? `${listES(lead)} días antes` : 'Sin antelación'];
   if (cfg.notify_on_due_day) parts.push('el mismo día');
   if (cfg.weekly_overdue) parts.push('cada semana si vence');
-  const off = [!cfg.notify_itv && 'ITV', !cfg.notify_maintenance && 'mantenimiento por fecha', !cfg.notify_usage && 'mantenimiento por km'].filter(Boolean);
+  const off = [!cfg.notify_itv && 'ITV', !cfg.notify_insurance && 'seguro', !cfg.notify_maintenance && 'mantenimiento por fecha', !cfg.notify_usage && 'mantenimiento por km'].filter(Boolean);
   if (off.length) parts.push(`sin avisos de ${listES(off)}`);
   return { summary: parts.join(' · '), warn: off.length > 0 };
 }
@@ -80,6 +80,7 @@ function whenCard(cfg) {
           notify_on_due_day: f.notify_on_due_day,
           weekly_overdue: f.weekly_overdue,
           notify_itv: f.notify_itv,
+          notify_insurance: f.notify_insurance,
           notify_maintenance: f.notify_maintenance,
           notify_usage: f.notify_usage,
         };
@@ -96,6 +97,7 @@ function whenCard(cfg) {
     checkField('Recordar cada semana mientras siga vencido', 'weekly_overdue', cfg.weekly_overdue),
     h('div', { class: 'field-label', style: 'margin-top:4px' }, 'Qué avisar'),
     checkField('ITV', 'notify_itv', cfg.notify_itv),
+    checkField('Seguro', 'notify_insurance', cfg.notify_insurance),
     checkField('Mantenimiento por fecha', 'notify_maintenance', cfg.notify_maintenance),
     checkField('Mantenimiento por km u horas', 'notify_usage', cfg.notify_usage),
     save,
