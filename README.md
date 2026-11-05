@@ -202,6 +202,8 @@ Cosas a tener en cuenta:
 
 El **seguro** funciona igual que la ITV: la fecha de vencimiento se pone a mano por vehículo (sin tabla de reglas, no hay nada que calcular) y desde ahí entra en el semáforo del panel, el email diario y el feed .ics, con las mismas antelaciones. Se puede desactivar en **Ajustes → Cuándo y de qué avisar** (`notify_insurance`). Tipo de seguro y aseguradora son texto libre, solo para consulta.
 
+Cada seguro guarda también su **precio anual** (`insurance_cost`). En la ficha, **Renovar seguro** pide el nuevo vencimiento, aseguradora, tipo y precio, y guarda la póliza que se sustituye en **Pólizas anteriores** (tabla `insurance_history`), para comparar precios cuando toca pedir presupuesto. Lo hace la función `renew_insurance()` en un solo paso (migración 9).
+
 La **financiación** (préstamo o leasing) es solo informativa: entidad y fecha de fin se ven en la ficha del vehículo, pero no generan avisos ni cuentan para el semáforo.
 
 ### Mantenimiento

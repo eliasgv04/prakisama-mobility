@@ -8,7 +8,7 @@ import { resizeImage } from '../lib/image.js';
 import { lookupMatricula } from '../lib/lookupMatricula.js';
 import { normalizeMatricula, validateMatricula } from '../lib/matricula.js';
 import { navigate } from '../router.js';
-import { areaField, button, checkField, icon, readForm, selectField, textField, toInt } from '../ui/components.js';
+import { areaField, button, checkField, icon, readForm, selectField, textField, toInt, toNum } from '../ui/components.js';
 import { confirmDialog, h, toast } from '../ui/dom.js';
 
 const TYPE_OPTIONS = Object.entries(VEHICLE_TYPES).map(([value, { label }]) => [value, label]);
@@ -122,6 +122,7 @@ export default async function vehicleForm({ params }) {
   const insuranceType = textField('Tipo de seguro (opcional)', 'insurance_type', { value: v.insurance_type ?? '', placeholder: 'Ej.: Todo riesgo' });
   const insurer = textField('Aseguradora (opcional)', 'insurer', { value: v.insurer ?? '' });
   const insuranceExpiry = textField('Vencimiento del seguro (opcional)', 'insurance_expiry', { type: 'date', value: v.insurance_expiry ?? '' });
+  const insuranceCost = textField('Precio anual (€), opcional', 'insurance_cost', { type: 'number', inputmode: 'decimal', min: 0, step: '0.01', value: v.insurance_cost ?? '' });
 
   // --- Financiación: solo informativa, no genera avisos ---
   const financingLender = textField('Entidad financiera', 'financing_lender', { value: v.financing_lender ?? '' });
@@ -162,6 +163,7 @@ export default async function vehicleForm({ params }) {
           insurance_type: f.insurance_type,
           insurer: f.insurer,
           insurance_expiry: f.insurance_expiry,
+          insurance_cost: toNum(f.insurance_cost),
           financing_type: f.financing_type,
           financing_lender: f.financing_lender,
           financing_end_date: f.financing_end_date,
@@ -196,7 +198,7 @@ export default async function vehicleForm({ params }) {
     h('div', { class: 'field-label', style: 'margin-top:4px' }, 'Seguro'),
     insuranceType,
     insurer,
-    insuranceExpiry,
+    h('div', { class: 'row2' }, insuranceExpiry, insuranceCost),
     h('div', { class: 'field-label', style: 'margin-top:4px' }, 'Financiación'),
     financingType,
     financingLender,

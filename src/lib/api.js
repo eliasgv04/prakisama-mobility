@@ -131,6 +131,28 @@ export async function setVehicleActive(id, active) {
   invalidate();
 }
 
+/** Renueva el seguro: la póliza actual pasa al historial y la nueva queda en el vehículo (atómico). */
+export async function renewInsurance(vehicleId, { expiry, insurer, type, cost }) {
+  orThrow(await supabase.rpc('renew_insurance', { p_vehicle_id: vehicleId, p_expiry: expiry, p_insurer: insurer, p_type: type, p_cost: cost }));
+  invalidate();
+}
+
+/** Pólizas anteriores del vehículo, de la más reciente a la más antigua. */
+export async function getInsuranceHistory(vehicleId) {
+  return orThrow(
+    await supabase
+      .from('insurance_history')
+      .select('id, insurer, insurance_type, cost, expiry_date')
+      .eq('vehicle_id', vehicleId)
+      .order('expiry_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false }),
+  );
+}
+
+export async function deleteInsuranceHistory(id) {
+  orThrow(await supabase.from('insurance_history').delete().eq('id', id));
+}
+
 export async function setItvManualDate(id, date) {
   orThrow(await supabase.from('vehicles').update({ itv_manual_date: date }).eq('id', id).select().single());
   invalidate();

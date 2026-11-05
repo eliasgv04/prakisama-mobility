@@ -4,7 +4,7 @@ Toda la seguridad de datos está en la base de datos (Row Level Security), no en
 
 ## Principios
 
-1. **RLS activado en las 9 tablas** y en Storage. Sin política = denegado.
+1. **RLS activado en las 10 tablas** y en Storage. Sin política = denegado.
 2. Solo el rol `authenticated` (usuario con sesión) recibe políticas. `anon` no puede nada.
 3. **Todos los usuarios son iguales** (decisión de la empresa, migración 7): no hay administradores ni encargados. Cualquier usuario con la cuenta **activa** puede hacer lo mismo. Desactivar una cuenta (`active = false`) corta su acceso al instante.
 4. `is_member()` es `SECURITY DEFINER` (lee `profiles` sin recursión de RLS) con `search_path` vacío. En las políticas se usa como `(select public.is_member())` para que Postgres la evalúe una vez por consulta y no por fila.
@@ -23,6 +23,7 @@ Toda la seguridad de datos está en la base de datos (Row Level Security), no en
 | `maintenance_rules` | miembros | miembros | miembros | miembros |
 | `maintenance_records` | miembros | miembros (`created_by` = yo) | miembros | miembros |
 | `attachments` | miembros | miembros (`created_by` = yo) | — | miembros |
+| `insurance_history` | miembros | miembros (o `renew_insurance()`, *security invoker*) | — | miembros |
 | `notification_settings` | miembros | — (fila única id=1) | miembros | — |
 | `notifications_sent` | miembros | solo Edge Function (service_role) | — | — |
 

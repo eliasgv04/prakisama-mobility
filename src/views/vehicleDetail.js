@@ -1,9 +1,9 @@
 // Ficha del vehículo: ITV, kilómetros, mantenimiento periódico e historial.
 
 import { FINANCING_TYPES, ITV_RESULTS, MAINTENANCE_KINDS, VEHICLE_TYPES } from '@shared/constants.js';
-import { diffDays, todayISO } from '@shared/dates.js';
+import { addYears, diffDays, todayISO } from '@shared/dates.js';
 import { describeDue } from '@shared/fleet.js';
-import { deleteInspection, deleteMaintenanceRecord, getHistory, setItvManualDate, signedUrls } from '../lib/api.js';
+import { deleteInspection, deleteInsuranceHistory, deleteMaintenanceRecord, getHistory, getInsuranceHistory, renewInsurance, setItvManualDate, signedUrls } from '../lib/api.js';
 import { downloadItemIcs } from '../lib/calendar.js';
 import { friendlyError } from '../lib/errors.js';
 import { itvSourceTag, loadFleet } from '../lib/fleet.js';
@@ -11,7 +11,7 @@ import { daysAgo, fmtDate, fmtMoney, fmtUsage, usageWord } from '../lib/format.j
 import { displayPlate } from '../lib/matricula.js';
 import { session } from '../lib/session.js';
 import { navigate, refresh } from '../router.js';
-import { button, empty, icon, section, spinner, statusChip } from '../ui/components.js';
+import { button, empty, icon, readForm, section, spinner, statusChip, textField, toNum } from '../ui/components.js';
 import { clear, confirmDialog, h, openSheet, toast } from '../ui/dom.js';
 import { openUsageSheet } from './usageSheet.js';
 
@@ -28,7 +28,7 @@ export default async function vehicleDetail({ params }) {
   const left = h('div', { class: 'col' });
   const right = h('div', { class: 'col' });
   const node = h('div', { class: 'detail-grid' }, left, right);
-  const insurance = insuranceCard({ vehicle, entry, settings });
+  const insurance = insuranceCard({ vehicle, entry, settings, online });
   left.append(heroCard(vehicle, entry, fleet), itvCard({ vehicle, entry, itv, settings, online }));
   if (insurance) left.append(insurance);
   left.append(usageCard({ vehicle, entry, settings, online }));
@@ -150,23 +150,142 @@ function openManualDateSheet(vehicle) {
   });
 }
 
-/** Solo se muestra si hay algo de seguro guardado; se edita desde "Editar vehículo". */
-function insuranceCard({ vehicle, entry, settings }) {
-  if (!vehicle.insurance_type && !vehicle.insurer && !vehicle.insurance_expiry) return null;
+/**
+ * Seguro: vencimiento, precio y pólizas anteriores. "Renovar seguro" pone la nueva póliza y guarda
+ * la actual en el historial, para comparar precios cuando toca pedir presupuesto.
+ */
+function insuranceCard({ vehicle, entry, settings, online }) {
+  const hasInsurance = Boolean(vehicle.insurance_type || vehicle.insurer || vehicle.insurance_expiry || vehicle.insurance_cost != null);
+  if (!hasInsurance && !online) return null;
   const item = entry.items.find((i) => i.type === 'insurance');
   const card = h('div', { class: 'card' });
-  const rows = [['Tipo', vehicle.insurance_type], ['Aseguradora', vehicle.insurer]].filter(([, value]) => value);
-  if (rows.length) card.append(h('dl', { class: 'kv' }, rows.flatMap(([k, val]) => [h('dt', {}, k), h('dd', {}, val)])));
+
   if (item) {
     card.append(
-      h('div', { style: `display:flex;justify-content:space-between;align-items:center;gap:8px${rows.length ? ';margin-top:12px' : ''}` }, h('div', { class: 'big' }, fmtDate(item.dueDate)), statusChip(item.status)),
+      h('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:8px' }, h('div', { class: 'big' }, fmtDate(item.dueDate)), statusChip(item.status)),
       h('p', { class: 'muted', style: 'margin-top:4px' }, describeDue(item)),
-      h('div', { class: 'btn-row', style: 'margin-top:12px' }, button('Añadir al calendario', { small: true, variant: 'ghost', iconName: 'calendar', onClick: () => downloadItemIcs(item, settings) })),
     );
+    if (item.status === 'overdue') card.append(h('p', { class: 'field-warn', style: 'margin-top:8px' }, 'Si ya lo has renovado, pulsa "Renovar seguro" y pon la nueva fecha.'));
   } else {
-    card.append(h('p', { class: 'muted', style: 'margin-top:8px' }, 'Sin fecha de vencimiento: edita el vehículo para añadirla y que entre en los avisos.'));
+    card.append(h('p', { class: 'muted' }, hasInsurance ? 'Sin fecha de vencimiento: pulsa "Renovar seguro" para añadirla y que entre en los avisos.' : 'Sin seguro registrado.'));
+  }
+
+  const rows = [
+    ['Aseguradora', vehicle.insurer],
+    ['Tipo', vehicle.insurance_type],
+    ['Precio', vehicle.insurance_cost != null ? `${fmtMoney(vehicle.insurance_cost)} al año` : null],
+  ].filter(([, value]) => value);
+  if (rows.length) card.append(h('dl', { class: 'kv', style: 'margin-top:12px' }, rows.flatMap(([k, val]) => [h('dt', {}, k), h('dd', {}, val)])));
+
+  const actions = h('div', { class: 'btn-row', style: 'margin-top:12px' });
+  if (online) actions.append(button(hasInsurance ? 'Renovar seguro' : 'Añadir seguro', { small: true, iconName: hasInsurance ? 'check' : 'plus', onClick: () => openInsuranceSheet(vehicle) }));
+  if (item) actions.append(button('Añadir al calendario', { small: true, variant: 'ghost', iconName: 'calendar', onClick: () => downloadItemIcs(item, settings) }));
+  card.append(actions);
+
+  // Pólizas anteriores (se cargan aparte, solo con conexión).
+  if (online && hasInsurance) {
+    const historyHost = h('div', {});
+    card.append(historyHost);
+    loadInsuranceHistory(historyHost, vehicle);
   }
   return section('Seguro', card);
+}
+
+async function loadInsuranceHistory(host, vehicle) {
+  let history;
+  try {
+    history = await getInsuranceHistory(vehicle.id);
+  } catch {
+    return; // el historial es secundario: si falla, la tarjeta se queda sin él
+  }
+  if (history.length === 0) return;
+
+  const previous = history.find((p) => p.cost != null);
+  const compare =
+    previous && vehicle.insurance_cost != null && Number(previous.cost) !== Number(vehicle.insurance_cost)
+      ? (() => {
+          const diff = Number(vehicle.insurance_cost) - Number(previous.cost);
+          return h('p', { class: 'muted', style: 'margin-top:8px' }, `Pagas ${fmtMoney(Math.abs(diff))} ${diff < 0 ? 'menos' : 'más'} que en la póliza anterior.`);
+        })()
+      : null;
+
+  host.replaceChildren(
+    ...(compare ? [compare] : []),
+    h('div', { class: 'field-label', style: 'margin-top:14px' }, 'Pólizas anteriores'),
+    ...history.map((p) =>
+      h(
+        'div',
+        { class: 'record' },
+        h('div', { class: 'head' }, h('span', { class: 'strong' }, p.insurer ?? 'Sin aseguradora'), h('span', { class: 'strong' }, p.cost != null ? fmtMoney(p.cost) : '—')),
+        h('div', { class: 'muted small' }, [p.insurance_type, p.expiry_date ? `Vencía el ${fmtDate(p.expiry_date)}` : null].filter(Boolean).join(' · ')),
+        h(
+          'div',
+          { style: 'margin-top:6px' },
+          button('Borrar', {
+            small: true,
+            variant: 'danger',
+            onClick: async () => {
+              if (!(await confirmDialog({ title: '¿Borrar esta póliza del historial?', message: 'No se puede deshacer.', confirmText: 'Borrar', danger: true }))) return;
+              try {
+                await deleteInsuranceHistory(p.id);
+                toast('Borrado', 'success');
+                loadInsuranceHistory(host, vehicle);
+              } catch (err) {
+                toast(friendlyError(err), 'error');
+              }
+            },
+          }),
+        ),
+      ),
+    ),
+  );
+}
+
+function openInsuranceSheet(vehicle) {
+  const renewing = Boolean(vehicle.insurance_expiry || vehicle.insurer);
+  return openSheet(renewing ? 'Renovar seguro' : 'Añadir seguro', (close) => {
+    // Lo normal es renovar por un año: se propone la fecha anterior + 1 año (editable).
+    const suggested = vehicle.insurance_expiry ? addYears(vehicle.insurance_expiry, 1) : '';
+    const save = button('Guardar', { type: 'submit', block: true, iconName: 'check' });
+    const form = h(
+      'form',
+      {
+        class: 'stack',
+        onsubmit: async (event) => {
+          event.preventDefault();
+          const f = readForm(form);
+          if (!f.insurance_expiry) return toast('Pon la fecha del nuevo vencimiento.', 'error');
+          save.disabled = true;
+          try {
+            await renewInsurance(vehicle.id, { expiry: f.insurance_expiry, insurer: f.insurer, type: f.insurance_type, cost: toNum(f.insurance_cost) });
+            toast('Seguro guardado', 'success');
+            close(true);
+            refresh();
+          } catch (err) {
+            toast(friendlyError(err), 'error');
+            save.disabled = false;
+          }
+        },
+      },
+      renewing
+        ? h(
+            'p',
+            { class: 'muted' },
+            `La póliza actual${vehicle.insurance_cost != null ? ` (${fmtMoney(vehicle.insurance_cost)})` : ''} se guarda en "Pólizas anteriores" para poder comparar precios. Si cambias de compañía o de precio, escribe los nuevos.`,
+          )
+        : null,
+      textField('Nuevo vencimiento', 'insurance_expiry', { type: 'date', required: true, value: suggested }),
+      textField('Aseguradora', 'insurer', { value: vehicle.insurer ?? '' }),
+      h(
+        'div',
+        { class: 'row2' },
+        textField('Precio anual (€)', 'insurance_cost', { type: 'number', inputmode: 'decimal', min: 0, step: '0.01', value: vehicle.insurance_cost ?? '' }),
+        textField('Tipo de seguro', 'insurance_type', { value: vehicle.insurance_type ?? '', placeholder: 'Ej.: Todo riesgo' }),
+      ),
+      save,
+    );
+    return form;
+  });
 }
 
 function usageCard({ vehicle, entry, settings, online }) {

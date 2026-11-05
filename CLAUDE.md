@@ -23,7 +23,7 @@ src/                     frontend (JS vanilla, ES modules)
   ui/                    helpers DOM (h()), componentes, toasts, diálogos
   views/                 una pantalla por archivo
 supabase/
-  migrations/            esquema versionado (1 esquema, 2 RLS, 3 storage, 4 extensiones, 5 endurecer funciones)
+  migrations/            esquema versionado (1 esquema, 2 RLS, 3 storage, 4 extensiones, 5 endurecer funciones, 6 ITV por tramos, 7 sin roles, 8 seguro y financiación, 9 precio y renovación del seguro)
   functions/_shared/     LÓGICA PURA compartida frontend + Edge Functions (fechas, ITV, mantenimiento, avisos, .ics)
   functions/send-reminders/   email diario (lo llama pg_cron)
   functions/calendar-feed/    feed .ics por usuario con token revocable
@@ -63,6 +63,7 @@ Nombre de la app: **Prakisama Mobility** (nombre corto en el móvil: "Mobility")
 - **`lookupMatricula(matricula)`** (`src/lib/lookupMatricula.js`) es `async` y devuelve `null`; punto de extensión para un servicio externo futuro. No hay ninguna API inventada.
 - **Sin tests unitarios**: el brief pedía Vitest, pero el usuario decidió no hacerlos (no añadirlos salvo que los pida). La lógica sigue siendo pura y aislada en `_shared/`, así que añadirlos más adelante es trivial.
 - **Seguro y financiación por vehículo** (migración 8): el **seguro** (`insurance_type`, `insurer`, `insurance_expiry`) se trata como un vencimiento más, igual que la ITV: sin tabla de reglas (la fecha la pone la persona a mano), entra en el semáforo, el email diario y el .ics, y es desactivable en Ajustes con `notify_insurance`. La **financiación** (`financing_type` préstamo/leasing, `financing_lender`, `financing_end_date`) es solo informativa: se ve en la ficha pero no genera avisos ni cuenta para el semáforo (decisión explícita del usuario, para no mandar avisos de algo que no pidió).
+- **Precio y renovación del seguro** (migración 9, petición del cliente 05/11/2026: no encontraba cómo poner el nuevo vencimiento y quiere comparar precios al renovar): `vehicles.insurance_cost` (precio anual) y tabla `insurance_history` con las pólizas anteriores. El botón **Renovar seguro** de la ficha llama a `renew_insurance()` (*security invoker*, atómica): archiva la póliza actual y pone la nueva. El historial se puede borrar (corregir errores), no editar.
 
 ## Estado por fases
 
@@ -73,7 +74,7 @@ Nombre de la app: **Prakisama Mobility** (nombre corto en el móvil: "Mobility")
 
 ### Proyecto Supabase real: "Prakisama Mobility" (ref `wlbqtnmwlljrpkixuaqj`, región eu-west-1)
 
-- [x] Migraciones 1-8 aplicadas (`supabase db push`). RLS activo en las 9 tablas; buckets `vehicle-photos` y `attachments` privados.
+- [x] Migraciones 1-8 aplicadas (la 9 pendiente de `db push`) (`supabase db push`). RLS activo en las 9 tablas (10 con la migración 9); buckets `vehicle-photos` y `attachments` privados.
 - [x] **Publicado en GitHub Pages: https://eliasgv04.github.io/prakisama-mobility/** (repositorio **privado** `eliasgv04/prakisama-mobility`; la cuenta es GitHub Pro, que permite Pages desde repos privados; la web publicada sí es pública). Se despliega sola en cada `git push` a `main` (`.github/workflows/deploy.yml`). Variables de Actions ya creadas: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (públicas). Para publicar un cambio: `git push` con credenciales de GitHub (no hay ningún token guardado en el repo ni en `.git/config`).
 - [x] Auth: registro público desactivado; `site_url` = la URL de Pages (con `/` final) y esa URL (+ `**`) y localhost en `uri_allow_list`. Secreto `APP_URL` = la URL de Pages.
 - [x] Edge Functions `send-reminders` y `calendar-feed` desplegadas (`--use-api --no-verify-jwt`). Secretos puestos: `CRON_SECRET`, `APP_URL`, `RESEND_API_KEY` y `RESEND_FROM`. Envío real probado de punta a punta (función → Resend → `delivered`, sin duplicados en la 2.ª ejecución).
