@@ -240,22 +240,63 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .photo-picker { display: flex; align-items: center; gap: 14px; }
 .photo-picker .thumb { width: 88px; height: 88px; }
 
-/* ---------- Ficha de vehículo ---------- */
-.hero { display: flex; gap: 14px; align-items: center; }
+/* ---------- Ficha de vehículo ----------
+   Todas las tarjetas siguen el mismo esquema:
+     título (etiqueta granate) + estado · dato grande · texto gris · datos · pie con botones iguales
+   y solo hay cuatro tamaños de letra:
+     13 px etiquetas en mayúsculas · 34 px dato principal · 16 px texto · 15 px texto secundario */
+.hero { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.hero .grow { flex: 1; min-width: 180px; }
 .hero .thumb { width: 84px; height: 84px; }
-.hero h2 { font-size: 30px; }
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 16px; }
-.kv dt { color: var(--ink-soft); }
-.kv dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
-.big { font-family: var(--font-title); font-size: 36px; font-weight: 800; line-height: 1.05; letter-spacing: .01em; }
-.tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-.tabs button { flex: 1; min-height: 46px; border: 2px solid var(--line); background: #fff; border-radius: var(--radius-sm); font-weight: 700; font-size: 14px; letter-spacing: .07em; text-transform: uppercase; cursor: pointer; }
+.hero h2 { font-size: 34px; }
+.hero .muted { margin-top: 2px; }
+.vehicle-head { margin-bottom: 16px; padding: 20px; }
+.vehicle-head .notes { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 15px; white-space: pre-wrap; }
+.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 20px; margin: 16px 0 0; padding-top: 16px; border-top: 1px solid var(--line); }
+.facts dt { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-mute); }
+.facts dd { margin: 2px 0 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.detail-grid > .card + .card { margin-top: 0; }
+/* Tarjeta en columna: los botones van siempre abajo, así quedan alineados con los de la tarjeta de al lado */
+.panel { padding: 20px; display: flex; flex-direction: column; }
+.panel > .card-actions { margin-top: auto; }
+.panel > :has(+ .card-actions) { margin-bottom: 16px; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 28px; margin-bottom: 6px; }
+.panel-title { display: flex; align-items: center; gap: 10px; color: var(--rojo); font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.panel-title::before { content: ""; width: 22px; height: 2px; background: currentColor; flex: none; }
+.panel-value { font-family: var(--font-title); font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: .01em; }
+.panel-value.missing { color: var(--ink-mute); }
+.panel-text { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 4px; font-size: 15px; color: var(--ink-soft); }
+.panel-head + .panel-text, .panel-head + div > .panel-text { margin-top: 0; }
+.panel .chip { font-size: 13px; }
+.panel .field-warn, .card-note { margin-top: 10px; font-size: 15px; }
+.card-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.card-actions:empty { display: none; }
+.sub-title { margin: 16px 0 6px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-mute); }
+.tabs { display: flex; gap: 6px; margin: 4px 0 14px; }
+.tabs button { flex: 1; min-height: 42px; border: 2px solid var(--line); background: #fff; border-radius: var(--radius-sm); font-weight: 700; font-size: 13px; letter-spacing: .07em; text-transform: uppercase; cursor: pointer; }
 .tabs button[aria-selected="true"] { background: var(--azul); border-color: var(--azul); color: #fff; }
+
+/* Listas dentro de una tarjeta (reglas, historial, pólizas): todas iguales */
+.records { margin-top: 10px; }
 .record { padding: 12px 0; border-top: 1px solid var(--line); }
-.record:first-child { border-top: 0; padding-top: 0; }
-.record .head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.records > .record:first-child { border-top: 0; padding-top: 0; }
+.records > .record:last-child { padding-bottom: 0; }
+.record .head { display: flex; justify-content: space-between; gap: 8px; align-items: center; min-height: 28px; font-size: 16px; }
+.record .meta, .record-foot .meta { font-size: 15px; color: var(--ink-soft); }
+.record-text { margin-top: 2px; white-space: pre-wrap; font-size: 16px; }
+.record-foot { display: flex; justify-content: space-between; align-items: center; gap: 4px 12px; flex-wrap: wrap; margin-top: 2px; min-height: 40px; }
+.record-foot > .meta { flex: 1; min-width: 0; }
+.record-foot > .meta:empty { display: none; }
+.record-foot > .link-btn { margin-left: auto; }
+/* Acción secundaria discreta dentro de listas (zona táctil de 40 px, sin caja) */
+.link-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 8px; margin-right: -8px; border: 0; background: none; border-radius: var(--radius-sm); color: var(--azul); font-weight: 700; font-size: 13px; letter-spacing: .07em; text-transform: uppercase; cursor: pointer; }
+.link-btn:hover { background: var(--info-bg); }
+.link-btn.danger { color: var(--overdue); }
+.link-btn.danger:hover { background: var(--overdue-bg); }
 .attachments { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.attachments a { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 14px; background: var(--bg); max-width: 100%; }
+.attachments a { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 15px; background: var(--bg); max-width: 100%; }
 .attachments img { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; }
 
 /* ---------- Diálogos y avisos ---------- */
@@ -368,8 +409,10 @@ h3 { font-family: var(--font-title); font-weight: 800; font-size: 24px; letter-s
 }
 /* Ficha del vehículo en dos columnas en pantalla ancha */
 @media (min-width: 1000px) {
-  .detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
-  .detail-grid .col:first-child > .card:first-child { margin-top: 0; }
-  .detail-grid .col > .section:first-child > .section-title { margin-top: 0; }
+  .detail-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+  .detail-grid > .full { grid-column: 1 / -1; }
+  .vehicle-head { padding: 24px; margin-bottom: 24px; }
+  .panel { padding: 24px; }
+  .vehicle-head .facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (min-width: 1300px) { .list-grid.three { grid-template-columns: repeat(3, 1fr); } }
